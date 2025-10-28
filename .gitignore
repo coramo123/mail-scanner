@@ -1,0 +1,51 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# User uploads and exports (do not commit user data)
+uploads/
+exports/
+testimages/
+
+# Mac
+.DS_Store
+
+# Test images
+*.jpg
+*.png
+*.jpeg
+*.gif
+*.heic
+*.heif
+*.webp

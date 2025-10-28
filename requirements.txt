@@ -1,0 +1,23 @@
+# Primary OCR - Gemini Vision API
+google-generativeai>=0.3.0
+
+# Image processing
+Pillow>=10.0.0
+pillow-heif>=0.13.0  # HEIC/HEIF format support
+
+# Fallback OCR - Tesseract (optional but recommended)
+pytesseract>=0.3.10
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Web Framework
+Flask>=3.0.0
+Werkzeug>=3.0.0
+
+# Spreadsheet Export
+pandas>=2.0.0
+openpyxl>=3.1.0
+
+# PDF Generation
+reportlab>=4.0.0
