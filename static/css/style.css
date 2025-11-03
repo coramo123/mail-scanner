@@ -182,12 +182,36 @@ main {
 .btn-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    width: 100%;
 }
 
 .btn-primary:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-main {
+    width: 100%;
+    font-size: 1.2em;
+    padding: 18px 40px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-main:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    opacity: 0.9;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #5a6268;
+    opacity: 1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
 }
 
 .btn-success {

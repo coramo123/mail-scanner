@@ -38,9 +38,21 @@
                     <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif" hidden>
                 </div>
 
-                <button id="scanButton" class="btn btn-primary" disabled>
-                    Scan Selected Photos
+                <button id="scanAllButton" class="btn btn-primary btn-main" disabled>
+                    Scan Photos
                 </button>
+
+                <div class="scan-controls-secondary" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; justify-content: center;">
+                    <button id="scanSelectedButton" class="btn btn-secondary btn-small" disabled>
+                        Scan Selected Photos
+                    </button>
+                    <button id="selectAllFilesButton" class="btn btn-secondary btn-small" disabled>
+                        Select All
+                    </button>
+                    <button id="deselectAllFilesButton" class="btn btn-secondary btn-small" disabled>
+                        Deselect All
+                    </button>
+                </div>
 
                 <div id="selectedFiles" class="selected-files"></div>
             </section>
@@ -92,7 +104,10 @@
         // Elements
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
-        const scanButton = document.getElementById('scanButton');
+        const scanSelectedButton = document.getElementById('scanSelectedButton');
+        const scanAllButton = document.getElementById('scanAllButton');
+        const selectAllFilesButton = document.getElementById('selectAllFilesButton');
+        const deselectAllFilesButton = document.getElementById('deselectAllFilesButton');
         const selectedFilesDiv = document.getElementById('selectedFiles');
         const progressSection = document.getElementById('progressSection');
         const progressBar = document.getElementById('progressBar');
@@ -157,43 +172,125 @@
 
         // Handle selected files
         function handleFiles(files) {
-            selectedFiles = files.filter(file => file.type.startsWith('image/'));
+            const newFiles = files.filter(file => file.type.startsWith('image/'));
 
-            if (selectedFiles.length === 0) {
+            if (newFiles.length === 0) {
                 alert('Please select valid image files');
                 return;
             }
 
+            // Add unique ID to each file for tracking
+            newFiles.forEach(file => {
+                if (!file.uniqueId) {
+                    file.uniqueId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    file.isChecked = true; // New files are checked by default
+                }
+            });
+
+            // Accumulate files instead of replacing
+            selectedFiles = [...selectedFiles, ...newFiles];
+
             displaySelectedFiles();
-            scanButton.disabled = false;
+            updateButtonStates();
+
+            // Reset file input so same file can be uploaded again if needed
+            fileInput.value = '';
         }
 
         // Display selected files
         function displaySelectedFiles() {
+            if (selectedFiles.length === 0) {
+                selectedFilesDiv.innerHTML = '';
+                return;
+            }
+
+            const checkedCount = selectedFiles.filter(f => f.isChecked).length;
+
             selectedFilesDiv.innerHTML = `
-                <p><strong>${selectedFiles.length}</strong> file(s) selected:</p>
-                <ul class="file-list">
-                    ${selectedFiles.map(f => `<li>${f.name}</li>`).join('')}
+                <p><strong>${selectedFiles.length}</strong> file(s) ready to scan (<strong>${checkedCount}</strong> selected):</p>
+                <ul class="file-list" style="list-style: none; padding: 0;">
+                    ${selectedFiles.map(f => `
+                        <li style="display: flex; align-items: center; padding: 5px 0; gap: 10px;">
+                            <input type="checkbox"
+                                   id="file_${f.uniqueId}"
+                                   ${f.isChecked ? 'checked' : ''}
+                                   onchange="toggleFileSelection('${f.uniqueId}')"
+                                   style="cursor: pointer;">
+                            <label for="file_${f.uniqueId}" style="flex: 1; cursor: pointer;">${f.name}</label>
+                            <button class="btn btn-small btn-danger"
+                                    onclick="removeFile('${f.uniqueId}')"
+                                    style="padding: 2px 8px; font-size: 12px;">Remove</button>
+                        </li>
+                    `).join('')}
                 </ul>
             `;
         }
 
-        // Scan button click
-        scanButton.addEventListener('click', uploadAndScan);
+        // File selection functions
+        function toggleFileSelection(fileId) {
+            const file = selectedFiles.find(f => f.uniqueId === fileId);
+            if (file) {
+                file.isChecked = !file.isChecked;
+                displaySelectedFiles();
+                updateButtonStates();
+            }
+        }
+
+        function removeFile(fileId) {
+            selectedFiles = selectedFiles.filter(f => f.uniqueId !== fileId);
+            displaySelectedFiles();
+            updateButtonStates();
+        }
+
+        function updateButtonStates() {
+            const checkedCount = selectedFiles.filter(f => f.isChecked).length;
+            const totalCount = selectedFiles.length;
+
+            scanSelectedButton.disabled = checkedCount === 0;
+            scanAllButton.disabled = totalCount === 0;
+            selectAllFilesButton.disabled = totalCount === 0;
+            deselectAllFilesButton.disabled = totalCount === 0;
+        }
+
+        // Select/Deselect all files
+        selectAllFilesButton.addEventListener('click', () => {
+            selectedFiles.forEach(f => f.isChecked = true);
+            displaySelectedFiles();
+            updateButtonStates();
+        });
+
+        deselectAllFilesButton.addEventListener('click', () => {
+            selectedFiles.forEach(f => f.isChecked = false);
+            displaySelectedFiles();
+            updateButtonStates();
+        });
+
+        // Scan button clicks
+        scanSelectedButton.addEventListener('click', () => uploadAndScan(false));
+        scanAllButton.addEventListener('click', () => uploadAndScan(true));
 
         // Upload and scan
-        async function uploadAndScan() {
+        async function uploadAndScan(scanAll = false) {
             if (selectedFiles.length === 0) return;
 
-            scanButton.disabled = true;
+            // Determine which files to scan
+            const filesToScan = scanAll ? selectedFiles : selectedFiles.filter(f => f.isChecked);
+
+            if (filesToScan.length === 0) {
+                alert('No files selected to scan');
+                return;
+            }
+
+            scanSelectedButton.disabled = true;
+            scanAllButton.disabled = true;
             progressSection.style.display = 'block';
 
-            const fileCount = selectedFiles.length;
+            const fileCount = filesToScan.length;
             progressText.textContent = `Uploading ${fileCount} file${fileCount > 1 ? 's' : ''}... This may take a few minutes.`;
             progressBar.style.width = '30%';
 
             const formData = new FormData();
-            selectedFiles.forEach(file => {
+            filesToScan.forEach(file => {
                 formData.append('files[]', file);
             });
 
@@ -217,14 +314,16 @@
                     // Load and display results
                     await loadResults();
 
+                    // Remove scanned files from the list
+                    const scannedFileIds = new Set(filesToScan.map(f => f.uniqueId));
+                    selectedFiles = selectedFiles.filter(f => !scannedFileIds.has(f.uniqueId));
+
                     // Reset
                     setTimeout(() => {
                         progressSection.style.display = 'none';
                         progressBar.style.width = '0%';
-                        selectedFiles = [];
-                        fileInput.value = '';
-                        selectedFilesDiv.innerHTML = '';
-                        scanButton.disabled = true;
+                        displaySelectedFiles();
+                        updateButtonStates();
                     }, 3000);
 
                     if (data.errors && data.errors.length > 0) {
@@ -241,7 +340,7 @@
                     progressSection.style.display = 'none';
                     progressBar.style.width = '0%';
                     progressBar.style.backgroundColor = '#4CAF50';
-                    scanButton.disabled = false;
+                    updateButtonStates();
                 }, 3000);
             }
         }
