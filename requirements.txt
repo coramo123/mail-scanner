@@ -26,10 +26,8 @@ reportlab>=4.0.0
 smartystreets-python-sdk>=4.15.0
 
 # Database and Authentication
-supabase==2.3.0
-httpx==0.25.2
-httpcore==1.0.2
-h2<5.0.0
+supabase>=2.0.0
+httpx>=0.24.0
 
 # Production Server
 gunicorn>=21.2.0
