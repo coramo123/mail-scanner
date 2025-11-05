@@ -4,14 +4,20 @@ Handles authentication and database operations for the Mail Scanner app
 """
 
 import os
-from supabase import create_client, Client
 from dotenv import load_dotenv
 from functools import wraps
 from flask import session, redirect, url_for, jsonify
 import httpx
 
-# Load environment variables
+# Load environment variables FIRST
 load_dotenv()
+
+# Disable HTTP/2 BEFORE any imports that use httpx
+os.environ['HTTPX_HTTP2'] = 'false'
+os.environ['HTTPCORE_HTTP2'] = 'false'
+
+# Now import supabase after setting environment variables
+from supabase import create_client, Client
 
 # Initialize Supabase client
 SUPABASE_URL = os.getenv('SUPABASE_URL')
@@ -24,11 +30,21 @@ if not SUPABASE_URL or not SUPABASE_KEY:
         "See SUPABASE_SETUP.md for instructions."
     )
 
-# Disable HTTP/2 globally to prevent StreamReset errors
-os.environ['HTTPX_HTTP2'] = '0'
+# Create a custom httpx client with HTTP/1.1 only
+http_client = httpx.Client(
+    timeout=60.0,
+    limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
+    http1=True,  # Force HTTP/1.1
+    http2=False  # Disable HTTP/2
+)
 
 # Initialize Supabase client
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    print("✓ Supabase client initialized successfully")
+except Exception as e:
+    print(f"✗ Error initializing Supabase client: {e}")
+    raise
 
 
 def get_current_user():
