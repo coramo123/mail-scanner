@@ -7,16 +7,46 @@ import os
 from dotenv import load_dotenv
 from functools import wraps
 from flask import session, redirect, url_for, jsonify
-import httpx
 
 # Load environment variables FIRST
 load_dotenv()
 
-# Disable HTTP/2 BEFORE any imports that use httpx
-os.environ['HTTPX_HTTP2'] = 'false'
-os.environ['HTTPCORE_HTTP2'] = 'false'
+# Disable HTTP/2 BEFORE any imports
+os.environ['HTTPX_HTTP2'] = '0'
+os.environ['HTTPCORE_HTTP2'] = '0'
 
-# Now import supabase after setting environment variables
+# Monkey-patch httpx to force HTTP/1.1
+import httpx
+import httpcore
+
+# Store original Client class
+_original_httpx_client = httpx.Client
+_original_async_client = httpx.AsyncClient
+
+# Create wrapper that forces HTTP/1.1
+class PatchedClient(_original_httpx_client):
+    def __init__(self, *args, **kwargs):
+        kwargs['http2'] = False
+        kwargs['http1'] = True
+        if 'timeout' not in kwargs:
+            kwargs['timeout'] = 60.0
+        super().__init__(*args, **kwargs)
+
+class PatchedAsyncClient(_original_async_client):
+    def __init__(self, *args, **kwargs):
+        kwargs['http2'] = False
+        kwargs['http1'] = True
+        if 'timeout' not in kwargs:
+            kwargs['timeout'] = 60.0
+        super().__init__(*args, **kwargs)
+
+# Replace httpx.Client with patched version
+httpx.Client = PatchedClient
+httpx.AsyncClient = PatchedAsyncClient
+
+print("✓ HTTP/2 disabled globally via monkey-patch")
+
+# Now import supabase after patching httpx
 from supabase import create_client, Client
 
 # Initialize Supabase client
@@ -29,14 +59,6 @@ if not SUPABASE_URL or not SUPABASE_KEY:
         "Please set SUPABASE_URL and SUPABASE_KEY in your .env file. "
         "See SUPABASE_SETUP.md for instructions."
     )
-
-# Create a custom httpx client with HTTP/1.1 only
-http_client = httpx.Client(
-    timeout=60.0,
-    limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
-    http1=True,  # Force HTTP/1.1
-    http2=False  # Disable HTTP/2
-)
 
 # Initialize Supabase client
 try:
