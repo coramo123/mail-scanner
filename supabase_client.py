@@ -8,6 +8,7 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 from functools import wraps
 from flask import session, redirect, url_for, jsonify
+import httpx
 
 # Load environment variables
 load_dotenv()
@@ -22,6 +23,9 @@ if not SUPABASE_URL or not SUPABASE_KEY:
         "Please set SUPABASE_URL and SUPABASE_KEY in your .env file. "
         "See SUPABASE_SETUP.md for instructions."
     )
+
+# Disable HTTP/2 globally to prevent StreamReset errors
+os.environ['HTTPX_HTTP2'] = '0'
 
 # Initialize Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
