@@ -106,35 +106,60 @@ def sign_up(email, password):
 
 def sign_in(email, password):
     """
-    Sign in an existing user
+    Sign in an existing user with retry logic
     Returns: (success: bool, data/error: dict)
     """
-    try:
-        response = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
+    import time
 
-        if response.user and response.session:
-            return True, {
-                'user': response.user,
-                'session': response.session,
-                'access_token': response.session.access_token
-            }
-        else:
-            return False, {'error': 'Invalid credentials'}
+    max_retries = 3
+    retry_delay = 1  # seconds
 
-    except Exception as e:
-        error_msg = str(e)
-        print(f"Login error: {error_msg}")
+    for attempt in range(max_retries):
+        try:
+            print(f"Login attempt {attempt + 1}/{max_retries}")
 
-        # Handle specific error types
-        if "StreamReset" in error_msg or "stream_id" in error_msg:
-            return False, {'error': 'Connection error. Please try again.'}
-        elif "timeout" in error_msg.lower():
-            return False, {'error': 'Request timed out. Please try again.'}
-        else:
-            return False, {'error': error_msg}
+            response = supabase.auth.sign_in_with_password({
+                "email": email,
+                "password": password
+            })
+
+            if response.user and response.session:
+                print("✓ Login successful")
+                return True, {
+                    'user': response.user,
+                    'session': response.session,
+                    'access_token': response.session.access_token
+                }
+            else:
+                return False, {'error': 'Invalid credentials'}
+
+        except Exception as e:
+            error_msg = str(e)
+            print(f"Login error on attempt {attempt + 1}: {error_msg}")
+
+            # Handle specific error types
+            is_connection_error = (
+                "StreamReset" in error_msg or
+                "stream_id" in error_msg or
+                "RemoteProtocolError" in error_msg or
+                "ConnectionError" in error_msg
+            )
+
+            if is_connection_error and attempt < max_retries - 1:
+                # Retry on connection errors
+                print(f"Connection error, retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                continue
+            elif is_connection_error:
+                return False, {'error': 'Connection error after multiple attempts. Please try again later.'}
+            elif "timeout" in error_msg.lower():
+                return False, {'error': 'Request timed out. Please try again.'}
+            elif "invalid" in error_msg.lower() or "password" in error_msg.lower():
+                return False, {'error': 'Invalid email or password'}
+            else:
+                return False, {'error': error_msg}
+
+    return False, {'error': 'Failed to sign in after multiple attempts'}
 
 
 def sign_out():
