@@ -91,12 +91,12 @@ class MailScanner:
                 credentials = StaticCredentials(auth_id, auth_token)
                 self.smarty_client = ClientBuilder(credentials).build_us_street_api_client()
 
-    def scan_mail(self, image_path: str) -> Dict[str, Optional[str]]:
+    def scan_mail(self, image_source) -> Dict[str, Optional[str]]:
         """
         Scan a mail photo and extract sender information.
 
         Args:
-            image_path: Path to the mail image file
+            image_source: Either a file path (str/Path) or a file-like object (BytesIO, file upload)
 
         Returns:
             Dictionary with extracted information:
@@ -118,14 +118,16 @@ class MailScanner:
                 'verified_full_address': str or None
             }
         """
-        if not os.path.exists(image_path):
-            raise FileNotFoundError(f"Image file not found: {image_path}")
+        # Check if it's a file path
+        if isinstance(image_source, (str, Path)):
+            if not os.path.exists(image_source):
+                raise FileNotFoundError(f"Image file not found: {image_source}")
 
         # Extract address using OCR
         if self.use_gemini:
-            result = self._scan_with_gemini(image_path)
+            result = self._scan_with_gemini(image_source)
         elif TESSERACT_AVAILABLE:
-            result = self._scan_with_tesseract(image_path)
+            result = self._scan_with_tesseract(image_source)
         else:
             raise RuntimeError("No OCR method available. Install google-generativeai or pytesseract.")
 
@@ -279,13 +281,15 @@ class MailScanner:
             print(f"Unexpected error during address verification: {e}")
             return default_result
 
-    def _scan_with_gemini(self, image_path: str) -> Dict[str, Optional[str]]:
+    def _scan_with_gemini(self, image_source) -> Dict[str, Optional[str]]:
         """
         Use Gemini Vision API to extract sender information.
+        Args:
+            image_source: Either a file path or file-like object
         """
         try:
-            # Load and prepare image
-            image = Image.open(image_path)
+            # Load and prepare image (PIL Image.open works with both paths and file objects)
+            image = Image.open(image_source)
 
             # Create prompt for Gemini
             prompt = """
@@ -393,14 +397,16 @@ class MailScanner:
                 'category': None
             }
 
-    def _scan_with_tesseract(self, image_path: str) -> Dict[str, Optional[str]]:
+    def _scan_with_tesseract(self, image_source) -> Dict[str, Optional[str]]:
         """
         Use Tesseract OCR to extract text and parse sender information.
         This is a fallback method and may be less accurate than Gemini.
+        Args:
+            image_source: Either a file path or file-like object
         """
         try:
-            # Load image
-            image = Image.open(image_path)
+            # Load image (PIL Image.open works with both paths and file objects)
+            image = Image.open(image_source)
 
             # Extract text with Tesseract
             text = pytesseract.image_to_string(image)

@@ -13,6 +13,7 @@ import pandas as pd
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
+from io import BytesIO
 
 # Import Supabase helpers
 from supabase_client import (
@@ -163,16 +164,16 @@ def upload_files():
     for idx, file in enumerate(files, 1):
         if file and allowed_file(file.filename):
             try:
-                # Save uploaded file
                 filename = secure_filename(file.filename)
-                unique_filename = f"{uuid.uuid4()}_{filename}"
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-                file.save(filepath)
-
                 print(f"[{idx}/{total_files}] Processing: {filename}")
 
-                # Scan the mail
-                scan_result = scanner.scan_mail(filepath)
+                # Process image in-memory (no disk storage)
+                # Read file into BytesIO for in-memory processing
+                image_bytes = BytesIO(file.read())
+                image_bytes.seek(0)  # Reset pointer to beginning
+
+                # Scan the mail (scanner now accepts file-like objects)
+                scan_result = scanner.scan_mail(image_bytes)
 
                 print(f"[{idx}/{total_files}] ✓ Completed: {filename}")
                 print(f"    Category: {scan_result.get('category', 'Unknown')}")
