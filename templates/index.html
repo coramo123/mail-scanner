@@ -9,8 +9,18 @@
 <body>
     <div class="container">
         <header>
-            <h1>Mail Scanner</h1>
-            <p class="subtitle">From your mailbox to theirs in minutes</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <h1>Mail Scanner</h1>
+                    <p class="subtitle">From your mailbox to theirs in minutes</p>
+                </div>
+                <div style="text-align: right;">
+                    <p style="color: white; margin-bottom: 8px; opacity: 0.9;">{{ user.email }}</p>
+                    <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-small" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; display: inline-block;">
+                        Logout
+                    </a>
+                </div>
+            </div>
         </header>
 
         <!-- Tab Navigation -->
@@ -381,30 +391,44 @@
                             <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
                             <th>File</th>
                             <th>Sender Name</th>
-                            <th>Street</th>
-                            <th>City</th>
-                            <th>State</th>
-                            <th>ZIP</th>
+                            <th>Address</th>
+                            <th>Verified</th>
                             <th>Category</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="resultsTableBody">
-                        ${results.map(result => `
+                        ${results.map(result => {
+                            // Determine which address to display
+                            const hasVerified = result.verified && result.verified_full_address;
+                            const displayAddress = hasVerified ? result.verified_full_address : result.full_address;
+                            const showOriginal = hasVerified && result.full_address !== result.verified_full_address;
+
+                            // Verification status badge
+                            let verificationBadge = '';
+                            if (result.verification_status === 'verified' || result.verification_status === 'verified_missing_secondary') {
+                                verificationBadge = '<span style="color: #28a745; font-weight: bold;">Verified</span>';
+                            } else {
+                                verificationBadge = '<span style="color: #dc3545; font-weight: bold;">Failed</span>';
+                            }
+
+                            return `
                             <tr data-category="${result.category || ''}" data-id="${result.id}">
                                 <td><input type="checkbox" class="result-checkbox" data-id="${result.id}" onchange="toggleResultSelection('${result.id}')"></td>
                                 <td>${result.filename}</td>
                                 <td>${result.sender_name || '<em>Not found</em>'}</td>
-                                <td>${result.street || '<em>Not found</em>'}</td>
-                                <td>${result.city || '<em>Not found</em>'}</td>
-                                <td>${result.state || '<em>Not found</em>'}</td>
-                                <td>${result.zip || '<em>Not found</em>'}</td>
+                                <td>
+                                    ${displayAddress || '<em>Not found</em>'}
+                                    ${showOriginal ? `<br><small style="color: #6c757d;">Original: ${result.full_address}</small>` : ''}
+                                </td>
+                                <td>${verificationBadge}</td>
                                 <td><strong>${result.category || '<em>Not found</em>'}</strong></td>
                                 <td>
                                     <button class="btn btn-small btn-danger" onclick="deleteResult('${result.id}')">Delete</button>
                                 </td>
                             </tr>
-                        `).join('')}
+                        `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;

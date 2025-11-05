@@ -37,19 +37,32 @@ except ImportError:
     HEIF_AVAILABLE = False
     print("Warning: pillow-heif not installed. HEIC/HEIF files may not be supported.")
 
+try:
+    from smartystreets_python_sdk import StaticCredentials, exceptions, ClientBuilder
+    from smartystreets_python_sdk.us_street import Lookup as StreetLookup
+    SMARTY_AVAILABLE = True
+except ImportError:
+    SMARTY_AVAILABLE = False
+    print("Warning: smartystreets-python-sdk not installed. Address verification will be unavailable.")
+
 
 class MailScanner:
     """
     Scans photos of mail to extract return address and sender name.
     """
 
-    def __init__(self, gemini_api_key: Optional[str] = None, use_gemini: bool = True):
+    def __init__(self, gemini_api_key: Optional[str] = None, use_gemini: bool = True,
+                 smarty_auth_id: Optional[str] = None, smarty_auth_token: Optional[str] = None,
+                 use_smarty: bool = True):
         """
         Initialize the mail scanner.
 
         Args:
             gemini_api_key: API key for Gemini. If None, reads from GEMINI_API_KEY env var
             use_gemini: Whether to use Gemini as primary OCR method (default: True)
+            smarty_auth_id: Smarty auth ID. If None, reads from SMARTY_AUTH_ID env var
+            smarty_auth_token: Smarty auth token. If None, reads from SMARTY_AUTH_TOKEN env var
+            use_smarty: Whether to use Smarty for address verification (default: True)
         """
         self.use_gemini = use_gemini and GEMINI_AVAILABLE
 
@@ -62,6 +75,21 @@ class MailScanner:
                 genai.configure(api_key=api_key)
                 # Use latest Gemini model with vision support
                 self.model = genai.GenerativeModel('gemini-2.5-flash')
+
+        # Initialize Smarty address verification
+        self.use_smarty = use_smarty and SMARTY_AVAILABLE
+        self.smarty_client = None
+
+        if self.use_smarty:
+            auth_id = smarty_auth_id or os.getenv('SMARTY_AUTH_ID')
+            auth_token = smarty_auth_token or os.getenv('SMARTY_AUTH_TOKEN')
+
+            if not auth_id or not auth_token:
+                print("Warning: No Smarty credentials provided. Address verification will be disabled.")
+                self.use_smarty = False
+            else:
+                credentials = StaticCredentials(auth_id, auth_token)
+                self.smarty_client = ClientBuilder(credentials).build_us_street_api_client()
 
     def scan_mail(self, image_path: str) -> Dict[str, Optional[str]]:
         """
@@ -80,18 +108,176 @@ class MailScanner:
                 'zip': str or None,
                 'full_address': str or None,
                 'category': str or None,
-                'method': 'gemini' or 'tesseract'
+                'method': 'gemini' or 'tesseract',
+                'verified': bool or None,
+                'verification_status': str or None,
+                'verified_street': str or None,
+                'verified_city': str or None,
+                'verified_state': str or None,
+                'verified_zip': str or None,
+                'verified_full_address': str or None
             }
         """
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image file not found: {image_path}")
 
+        # Extract address using OCR
         if self.use_gemini:
-            return self._scan_with_gemini(image_path)
+            result = self._scan_with_gemini(image_path)
         elif TESSERACT_AVAILABLE:
-            return self._scan_with_tesseract(image_path)
+            result = self._scan_with_tesseract(image_path)
         else:
             raise RuntimeError("No OCR method available. Install google-generativeai or pytesseract.")
+
+        # Verify address with Smarty if enabled
+        if self.use_smarty:
+            verification_result = self.verify_address(
+                street=result.get('street'),
+                city=result.get('city'),
+                state=result.get('state'),
+                zipcode=result.get('zip')
+            )
+            result.update(verification_result)
+        else:
+            # Add default verification fields when Smarty is not used
+            result.update({
+                'verified': None,
+                'verification_status': 'not_attempted',
+                'verified_street': None,
+                'verified_city': None,
+                'verified_state': None,
+                'verified_zip': None,
+                'verified_full_address': None
+            })
+
+        return result
+
+    def verify_address(self, street: Optional[str], city: Optional[str],
+                      state: Optional[str], zipcode: Optional[str]) -> Dict[str, Optional[str]]:
+        """
+        Verify an address using Smarty address verification API.
+
+        Args:
+            street: Street address
+            city: City name
+            state: State abbreviation or full name
+            zipcode: ZIP code
+
+        Returns:
+            Dictionary with verification results:
+            {
+                'verified': bool,
+                'verification_status': str ('verified', 'invalid', 'ambiguous', 'error'),
+                'verified_street': str or None,
+                'verified_city': str or None,
+                'verified_state': str or None,
+                'verified_zip': str or None,
+                'verified_full_address': str or None
+            }
+        """
+        # Default response
+        default_result = {
+            'verified': False,
+            'verification_status': 'error',
+            'verified_street': None,
+            'verified_city': None,
+            'verified_state': None,
+            'verified_zip': None,
+            'verified_full_address': None
+        }
+
+        # Check if we have minimum required information
+        if not street:
+            default_result['verification_status'] = 'insufficient_data'
+            return default_result
+
+        if not self.smarty_client:
+            default_result['verification_status'] = 'not_configured'
+            return default_result
+
+        try:
+            # Create lookup
+            lookup = StreetLookup()
+            lookup.street = street
+            lookup.city = city
+            lookup.state = state
+            lookup.zipcode = zipcode
+            lookup.match = "invalid"  # Return result only if valid
+
+            # Send to Smarty
+            self.smarty_client.send_lookup(lookup)
+
+            result = lookup.result
+
+            if not result:
+                # No match found - address is invalid
+                return {
+                    'verified': False,
+                    'verification_status': 'invalid',
+                    'verified_street': None,
+                    'verified_city': None,
+                    'verified_state': None,
+                    'verified_zip': None,
+                    'verified_full_address': None
+                }
+
+            # Get first candidate (Smarty returns best match)
+            candidate = result[0]
+
+            # Build verified address
+            delivery_line = candidate.delivery_line_1
+            last_line = candidate.last_line
+            components = candidate.components
+
+            verified_street = delivery_line
+            verified_city = components.city_name
+            verified_state = components.state_abbreviation
+            verified_zip = f"{components.zipcode}-{components.plus4_code}" if components.plus4_code else components.zipcode
+
+            # Build full address
+            verified_full = f"{verified_street}, {verified_city}, {verified_state} {verified_zip}"
+
+            # Determine verification status based on match quality
+            analysis = candidate.analysis
+            dpv_match_code = analysis.dpv_match_code
+
+            if dpv_match_code == 'Y':
+                verification_status = 'verified'
+                verified = True
+            elif dpv_match_code == 'D':
+                verification_status = 'verified_missing_secondary'
+                verified = True
+            elif dpv_match_code == 'S':
+                verification_status = 'verified_missing_secondary'
+                verified = True
+            else:
+                verification_status = 'failed'
+                verified = False
+
+            return {
+                'verified': verified,
+                'verification_status': verification_status,
+                'verified_street': verified_street,
+                'verified_city': verified_city,
+                'verified_state': verified_state,
+                'verified_zip': verified_zip,
+                'verified_full_address': verified_full
+            }
+
+        except exceptions.SmartyException as e:
+            print(f"Smarty API error: {e}")
+            return {
+                'verified': False,
+                'verification_status': 'error',
+                'verified_street': None,
+                'verified_city': None,
+                'verified_state': None,
+                'verified_zip': None,
+                'verified_full_address': None
+            }
+        except Exception as e:
+            print(f"Unexpected error during address verification: {e}")
+            return default_result
 
     def _scan_with_gemini(self, image_path: str) -> Dict[str, Optional[str]]:
         """
