@@ -8,6 +8,7 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 from functools import wraps
 from flask import session, redirect, url_for, jsonify
+import httpx
 
 # Load environment variables
 load_dotenv()
@@ -23,7 +24,24 @@ if not SUPABASE_URL or not SUPABASE_KEY:
         "See SUPABASE_SETUP.md for instructions."
     )
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Create HTTP client with HTTP/1.1 only (avoids StreamReset errors)
+http_client = httpx.Client(
+    http2=False,  # Disable HTTP/2
+    timeout=30.0,  # Increase timeout
+    limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
+)
+
+# Initialize Supabase client with custom HTTP client
+supabase: Client = create_client(
+    SUPABASE_URL,
+    SUPABASE_KEY,
+    options={
+        'schema': 'public',
+        'headers': {},
+        'auto_refresh_token': True,
+        'persist_session': True
+    }
+)
 
 
 def get_current_user():
@@ -104,7 +122,16 @@ def sign_in(email, password):
             return False, {'error': 'Invalid credentials'}
 
     except Exception as e:
-        return False, {'error': str(e)}
+        error_msg = str(e)
+        print(f"Login error: {error_msg}")
+
+        # Handle specific error types
+        if "StreamReset" in error_msg or "stream_id" in error_msg:
+            return False, {'error': 'Connection error. Please try again.'}
+        elif "timeout" in error_msg.lower():
+            return False, {'error': 'Request timed out. Please try again.'}
+        else:
+            return False, {'error': error_msg}
 
 
 def sign_out():

@@ -27,6 +27,7 @@ smartystreets-python-sdk>=4.15.0
 
 # Database and Authentication
 supabase>=2.0.0
+httpx>=0.24.0
 
 # Production Server
 gunicorn>=21.2.0
