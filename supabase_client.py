@@ -70,7 +70,7 @@ except Exception as e:
 
 
 def get_current_user():
-    """Get the current authenticated user from session"""
+    """Get the current authenticated user from session with auto-refresh"""
     access_token = session.get('access_token')
     if not access_token:
         return None
@@ -80,7 +80,27 @@ def get_current_user():
         user_response = supabase.auth.get_user(access_token)
         return user_response.user
     except Exception as e:
-        print(f"Error getting current user: {e}")
+        error_msg = str(e)
+        print(f"Error getting current user: {error_msg}")
+
+        # If token expired, try to refresh
+        if "expired" in error_msg.lower() or "invalid" in error_msg.lower():
+            print("Token expired, attempting to refresh session...")
+            try:
+                # Get refresh token from session
+                refresh_token = session.get('refresh_token')
+                if refresh_token:
+                    # Refresh the session
+                    refresh_response = supabase.auth.refresh_session(refresh_token)
+                    if refresh_response and refresh_response.session:
+                        # Update session with new tokens
+                        session['access_token'] = refresh_response.session.access_token
+                        session['refresh_token'] = refresh_response.session.refresh_token
+                        print("✓ Session refreshed successfully")
+                        return refresh_response.user
+            except Exception as refresh_error:
+                print(f"Failed to refresh session: {refresh_error}")
+
         # Clear invalid session
         session.clear()
         return None

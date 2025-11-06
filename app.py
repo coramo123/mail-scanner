@@ -71,8 +71,9 @@ def login():
     success, data = sign_in(email, password)
 
     if success:
-        # Store access token in session
+        # Store access token and refresh token in session
         session['access_token'] = data['access_token']
+        session['refresh_token'] = data['session'].refresh_token if data.get('session') else None
         session['user_id'] = str(data['user'].id)
         return redirect(url_for('index'))
     else:
@@ -109,6 +110,7 @@ def signup():
         # Auto-login after successful signup
         if data.get('session'):
             session['access_token'] = data['session'].access_token
+            session['refresh_token'] = data['session'].refresh_token
             session['user_id'] = str(data['user'].id)
             return redirect(url_for('index'))
         else:
