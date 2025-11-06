@@ -14,6 +14,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 from io import BytesIO
+import gc
 
 # Import Supabase helpers
 from supabase_client import (
@@ -176,6 +177,11 @@ def upload_files():
 
                 # Scan the mail (scanner now accepts file-like objects)
                 scan_result = scanner.scan_mail(image_bytes)
+
+                # Free memory immediately after processing
+                image_bytes.close()
+                del image_bytes
+                gc.collect()
 
                 print(f"[{idx}/{total_files}] ✓ Completed: {filename}")
                 print(f"    Category: {scan_result.get('category', 'Unknown')}")

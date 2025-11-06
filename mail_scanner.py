@@ -291,6 +291,15 @@ class MailScanner:
             # Load and prepare image (PIL Image.open works with both paths and file objects)
             image = Image.open(image_source)
 
+            # Resize image if too large (reduce memory usage)
+            # Max dimension of 2048px is plenty for OCR
+            max_dimension = 2048
+            if max(image.size) > max_dimension:
+                ratio = max_dimension / max(image.size)
+                new_size = tuple(int(dim * ratio) for dim in image.size)
+                image = image.resize(new_size, Image.Resampling.LANCZOS)
+                print(f"Resized image to {new_size} to reduce memory usage")
+
             # Create prompt for Gemini
             prompt = """
             Analyze this image of mail and extract information about the PRIMARY SUBJECT of this mail:
@@ -420,6 +429,14 @@ class MailScanner:
         try:
             # Load image (PIL Image.open works with both paths and file objects)
             image = Image.open(image_source)
+
+            # Resize image if too large (reduce memory usage)
+            max_dimension = 2048
+            if max(image.size) > max_dimension:
+                ratio = max_dimension / max(image.size)
+                new_size = tuple(int(dim * ratio) for dim in image.size)
+                image = image.resize(new_size, Image.Resampling.LANCZOS)
+                print(f"Resized image to {new_size} to reduce memory usage")
 
             # Extract text with Tesseract
             text = pytesseract.image_to_string(image)
