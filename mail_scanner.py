@@ -293,47 +293,58 @@ class MailScanner:
 
             # Create prompt for Gemini
             prompt = """
-            Analyze this image of mail (envelope, postcard, package, or letter) and extract the sender's information:
+            Analyze this image of mail and extract information about the PRIMARY SUBJECT of this mail:
 
-            1. **Sender Name**:
-               - First, check the return address (usually top-left corner of envelope)
-               - If no name is in the return address, look inside the letter for:
-                 * Signature at the bottom
-                 * Name in the closing (e.g., "Sincerely, [Name]")
-                 * Letterhead at the top
+            **CRITICAL - Who to Extract:**
+
+            First, identify what type of mail this is:
+
+            1. **For Announcements (Wedding, Graduation, Baby):**
+               - Extract the name of the PRIMARY SUBJECT (the person/people being celebrated)
+               - Wedding Invitation → Extract the COUPLE'S names (bride and groom), NOT the parents
+               - Graduation Announcement → Extract the GRADUATE'S name, NOT the parents
+               - Baby Announcement → Extract the BABY'S name, NOT the parents
+               - Look in the main body text, headlines, or featured names
+
+            2. **For Regular Mail/Fan Letters:**
+               - Extract the SENDER's name from:
+                 * Return address (top-left corner)
+                 * Signature at bottom
+                 * Letterhead
                  * "From:" line
-               - Use context clues to identify the sender's name accurately
 
-            2. **Return Address**: Extract from the envelope/letter:
-               - Street Address
-               - City
-               - State
-               - ZIP Code
+            **Return Address:**
+            Always extract the return address (top-left corner of envelope) for mailing purposes:
+            - Street Address
+            - City
+            - State
+            - ZIP Code
 
-            3. **Mail Category**: Identify the type/category of this mail based on visual cues, text content, and context:
-               - "Graduation Announcement" - graduation-related content, formal announcements
-               - "Wedding Invitation" - wedding invitations, save the dates, RSVP cards
-               - "Baby Announcement" - birth announcements, baby shower invitations
-               - "Fan Letters" - letters praising a product, service, or expressing appreciation
-               - "Other" - anything that doesn't fit the above categories
+            **Mail Category:**
+            Identify the type based on visual cues and content:
+            - "Wedding Invitation" - wedding invitations, save the dates, RSVP cards
+            - "Graduation Announcement" - graduation announcements, grad party invites
+            - "Baby Announcement" - birth announcements, baby shower invitations
+            - "Fan Letters" - appreciation letters, fan mail
+            - "Other" - anything else
 
-            Return the information in JSON format with these exact keys:
+            Return JSON with these exact keys:
             {
-                "sender_name": "full name here or null if not found",
-                "street": "street address or null if not found",
-                "city": "city or null if not found",
-                "state": "state abbreviation or full name",
-                "zip": "zip code or null if not found",
-                "category": "one of the categories listed above"
+                "sender_name": "PRIMARY SUBJECT name (couple/graduate/baby) OR sender name for regular mail",
+                "street": "return address street or null",
+                "city": "return address city or null",
+                "state": "return address state or null",
+                "zip": "return address zip or null",
+                "category": "one of the categories above"
             }
 
-            Important:
-            - Extract ONLY the sender's information, NOT the recipient/destination
-            - The return address is usually in the top-left corner of an envelope
-            - For the sender name, prioritize: return address name > signature > letterhead > closing
-            - For category, look at visual design, text content, and overall purpose
+            IMPORTANT:
+            - For announcements: sender_name = the person being celebrated (NOT the parents sending it)
+            - For regular mail: sender_name = the person who sent it
+            - Return address = always the mailing address (top-left corner)
+            - If multiple people (like a couple), include both names
             - Handle handwriting and various fonts
-            - If any field is not clearly visible, use null
+            - If any field unclear, use null
             - Return ONLY the JSON object, no additional text
             """
 
