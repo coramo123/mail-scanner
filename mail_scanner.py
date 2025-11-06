@@ -300,10 +300,10 @@ class MailScanner:
             First, identify what type of mail this is:
 
             1. **For Announcements (Wedding, Graduation, Baby):**
-               - Extract the name of the PRIMARY SUBJECT (the person/people being celebrated)
-               - Wedding Invitation → Extract the COUPLE'S names (bride and groom), NOT the parents
+               - Extract the name of the PRIMARY SUBJECT (the person/people to respond to)
+               - Wedding Invitation → Extract the COUPLE'S names (bride and groom), NOT the parents announcing
                - Graduation Announcement → Extract the GRADUATE'S name, NOT the parents
-               - Baby Announcement → Extract the BABY'S name, NOT the parents
+               - Baby Announcement → Extract the MOTHER'S name (the parent, not the baby's name)
                - Look in the main body text, headlines, or featured names
 
             2. **For Regular Mail/Fan Letters:**
@@ -330,7 +330,7 @@ class MailScanner:
 
             Return JSON with these exact keys:
             {
-                "sender_name": "PRIMARY SUBJECT name (couple/graduate/baby) OR sender name for regular mail",
+                "sender_name": "PRIMARY SUBJECT name (couple/graduate/mother) OR sender name for regular mail",
                 "street": "return address street or null",
                 "city": "return address city or null",
                 "state": "return address state or null",
@@ -339,8 +339,10 @@ class MailScanner:
             }
 
             IMPORTANT:
-            - For announcements: sender_name = the person being celebrated (NOT the parents sending it)
-            - For regular mail: sender_name = the person who sent it
+            - Wedding: sender_name = bride and groom's names
+            - Graduation: sender_name = graduate's name
+            - Baby announcement: sender_name = mother's name (not the baby)
+            - Regular mail: sender_name = sender's name
             - Return address = always the mailing address (top-left corner)
             - If multiple people (like a couple), include both names
             - Handle handwriting and various fonts
