@@ -356,6 +356,26 @@ td em {
     .container {
         padding: 0;
         max-width: 100%;
+        border: none !important; /* Remove border on mobile */
+        box-shadow: none !important;
+    }
+
+    main {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .upload-area {
+        border: none !important;
+    }
+
+    table {
+        border: none !important;
+    }
+
+    th, td {
+        border-left: none !important;
+        border-right: none !important;
     }
 
     /* Compact Header */
