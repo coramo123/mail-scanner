@@ -346,18 +346,22 @@ td em {
     color: #999;
 }
 
-/* Responsive Design - Fit to Screen */
+/* Responsive Design - Full Screen Mobile */
 @media (max-width: 768px) {
-    /* Make everything compact and screen-friendly */
+    /* Remove ALL padding and borders for full screen */
     body {
         font-size: 16px; /* Prevent iOS zoom on inputs */
+        padding: 0 !important; /* Remove body padding - no borders! */
+        margin: 0 !important;
     }
 
     .container {
         padding: 0;
         max-width: 100%;
-        border: none !important; /* Remove border on mobile */
+        border: none !important;
         box-shadow: none !important;
+        border-radius: 0 !important; /* No rounded corners on mobile */
+        margin: 0 !important;
     }
 
     main {
@@ -367,6 +371,7 @@ td em {
 
     .upload-area {
         border: none !important;
+        margin: 0;
     }
 
     table {
@@ -376,6 +381,13 @@ td em {
     th, td {
         border-left: none !important;
         border-right: none !important;
+    }
+
+    /* Remove borders from all cards */
+    .subscription-card,
+    .plan-card,
+    .stat-card {
+        border: none !important;
     }
 
     /* Compact Header */
@@ -393,25 +405,29 @@ td em {
         margin-top: 2px;
     }
 
-    /* Compact Tabs */
+    /* Compact Tabs - No Border */
     .tabs {
         flex-direction: row;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         padding: 0;
         margin-bottom: 0;
+        border: none !important;
+        border-bottom: none !important;
     }
 
     .tab-button {
         padding: 12px 20px;
         font-size: 0.95em;
         min-width: 50%;
+        flex: 1;
         white-space: nowrap;
-        border-bottom: 3px solid transparent;
+        border: none !important;
+        border-bottom: 3px solid transparent !important;
     }
 
     .tab-button.active {
-        border-bottom-color: #667eea;
+        border-bottom-color: #667eea !important;
     }
 
     /* Compact Main Content */
