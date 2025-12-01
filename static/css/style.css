@@ -265,17 +265,24 @@ main {
     font-size: 0.85em;
 }
 
+.btn-tiny {
+    padding: 6px 12px;
+    font-size: 0.75em;
+    opacity: 0.85;
+}
+
 /* Secondary Scan Controls */
 .scan-controls-secondary {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     margin-top: 10px;
     justify-content: center;
 }
 
 .scan-controls-secondary .btn {
     flex: 1;
-    max-width: 200px;
+    max-width: 150px;
+    font-weight: 500;
 }
 
 /* Progress Section */
@@ -512,18 +519,20 @@ td em {
         font-size: 0.85em;
     }
 
-    /* Secondary Controls - Stack on mobile */
+    /* Secondary Controls - Keep in a row on mobile */
     .scan-controls-secondary {
-        flex-direction: column;
+        flex-direction: row;
         gap: 6px;
-        margin-top: 8px;
+        margin-top: 10px;
     }
 
-    .scan-controls-secondary .btn {
-        width: 100% !important;
+    .scan-controls-secondary .btn-tiny {
+        flex: 1;
+        width: auto !important;
         max-width: none;
-        padding: 10px 12px !important;
-        font-size: 0.9em !important;
+        padding: 8px 6px !important;
+        font-size: 0.7em !important;
+        white-space: nowrap;
     }
 
     /* Compact Buttons - Still Touch-Friendly */
