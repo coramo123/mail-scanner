@@ -385,51 +385,62 @@ td em {
     }
 
     main {
-        padding: 20px 15px;
+        padding: 15px 12px;
     }
 
     .upload-area {
-        padding: 50px 20px;
-        min-height: 250px;
+        padding: 30px 15px;
+        min-height: 200px;
     }
 
     .upload-area h2 {
-        font-size: 1.3em;
-        margin-bottom: 15px;
-    }
-
-    .upload-area p {
-        font-size: 1em;
-        margin-bottom: 25px;
-    }
-
-    /* Bigger, more touch-friendly buttons */
-    .btn {
-        width: 100%;
-        padding: 18px 24px;
-        font-size: 1.1em;
-        min-height: 52px; /* Minimum touch target */
+        font-size: 1.2em;
         margin-bottom: 10px;
     }
 
+    .upload-area p {
+        font-size: 0.95em;
+        margin-bottom: 20px;
+        line-height: 1.4;
+    }
+
+    /* Touch-friendly buttons but more compact */
+    .btn {
+        width: 100%;
+        padding: 14px 20px;
+        font-size: 1em;
+        min-height: 48px; /* Good touch target */
+        margin-bottom: 8px;
+    }
+
     .btn-main {
-        padding: 20px 24px;
-        font-size: 1.15em;
+        padding: 16px 20px;
+        font-size: 1.05em;
     }
 
     .results-header {
         flex-direction: column;
         align-items: stretch;
-        gap: 15px;
+        gap: 10px;
+        margin-bottom: 15px;
     }
 
     .results-header h2 {
-        font-size: 1.5em;
+        font-size: 1.3em;
+        margin: 0;
     }
 
     .results-actions {
-        flex-direction: column;
-        gap: 10px;
+        flex-direction: row;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .results-actions .btn {
+        flex: 1;
+        min-width: 100px;
+        padding: 12px 16px;
+        font-size: 0.9em;
     }
 
     /* Make tables scroll horizontally on mobile */
@@ -884,13 +895,22 @@ td em {
     padding: 20px;
 }
 
-/* Mobile Responsive */
+/* Mobile Responsive - Compact Account Page */
 @media (max-width: 768px) {
-    /* Account Header */
+    /* Account Header - More Compact */
     header > div {
         flex-direction: column !important;
-        gap: 20px;
+        gap: 12px;
         align-items: flex-start !important;
+    }
+
+    header h1 {
+        font-size: 1.5em !important;
+    }
+
+    header p.subtitle {
+        font-size: 0.85em !important;
+        margin-top: 4px !important;
     }
 
     header > div > div {
@@ -898,142 +918,216 @@ td em {
         text-align: left !important;
     }
 
+    header > div > div > p {
+        font-size: 0.9em !important;
+        margin-bottom: 6px !important;
+    }
+
     header > div > div > div {
-        flex-direction: column !important;
-        gap: 10px !important;
+        flex-direction: row !important;
+        gap: 8px !important;
     }
 
     header .btn-small {
-        width: 100% !important;
-        padding: 14px !important;
-        font-size: 1em !important;
+        width: auto !important;
+        padding: 10px 16px !important;
+        font-size: 0.9em !important;
         text-align: center !important;
     }
 
     .account-main {
-        padding: 15px;
+        padding: 12px;
     }
 
-    /* Subscription Overview */
+    /* Subscription Overview - Minimal */
     .subscription-card {
-        padding: 20px 15px;
+        padding: 15px 12px;
+        margin-bottom: 15px;
     }
 
     .subscription-header {
-        flex-direction: column;
-        gap: 15px;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
     }
 
     .subscription-header h3 {
-        font-size: 1.5em;
+        font-size: 1.2em;
+        margin: 0;
     }
 
     .subscription-price {
-        text-align: left;
+        text-align: right;
         margin-top: 0;
     }
 
     .price-amount {
-        font-size: 2em;
+        font-size: 1.5em;
     }
 
-    /* Usage Stats */
+    .price-period {
+        font-size: 0.85em;
+    }
+
+    /* Usage Stats - Compact Inline */
+    .usage-stats {
+        margin: 12px 0;
+    }
+
     .usage-stats h4 {
-        font-size: 1.1em;
+        font-size: 0.95em;
+        margin-bottom: 8px;
+    }
+
+    .usage-bar {
+        height: 6px;
+        margin: 8px 0;
     }
 
     .usage-text {
-        font-size: 1em;
+        font-size: 0.9em;
     }
 
-    /* Plans Grid - Stack cards vertically */
+    .usage-warning {
+        font-size: 0.85em;
+        padding: 8px;
+        margin-top: 10px;
+    }
+
+    .billing-info {
+        margin-top: 12px;
+    }
+
+    .billing-info p {
+        font-size: 0.9em;
+        margin: 6px 0;
+    }
+
+    /* Plans Grid - Minimal Cards */
+    .plans-section {
+        margin-top: 20px;
+    }
+
+    .plans-section h2 {
+        font-size: 1.3em;
+        margin-bottom: 12px;
+    }
+
     .plans-grid {
         grid-template-columns: 1fr;
-        gap: 20px;
-    }
-
-    .plan-card {
-        padding: 25px 20px;
-    }
-
-    .plan-header h3 {
-        font-size: 1.4em;
-    }
-
-    .plan-price .price-amount {
-        font-size: 2.2em;
-    }
-
-    .plan-features {
-        font-size: 1em;
-        margin: 20px 0;
-    }
-
-    .plan-features li {
-        padding: 10px 0;
-    }
-
-    /* Subscription Actions */
-    .subscription-actions {
-        flex-direction: column;
         gap: 12px;
     }
 
-    .subscription-actions .btn {
-        width: 100%;
-        padding: 16px;
-        font-size: 1.05em;
+    .plan-card {
+        padding: 15px 12px;
     }
 
-    /* History Stats */
+    .plan-header h3 {
+        font-size: 1.1em;
+    }
+
+    .plan-price .price-amount {
+        font-size: 1.6em;
+    }
+
+    .plan-price .price-period {
+        font-size: 0.85em;
+    }
+
+    .plan-features {
+        font-size: 0.85em;
+        margin: 12px 0;
+        padding-left: 0;
+    }
+
+    .plan-features li {
+        padding: 6px 0;
+        padding-left: 24px;
+    }
+
+    .plan-action .btn {
+        padding: 12px;
+        font-size: 0.95em;
+    }
+
+    /* Subscription Actions - Compact */
+    .subscription-actions {
+        flex-direction: row;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .subscription-actions .btn {
+        width: auto;
+        flex: 1;
+        padding: 12px 10px;
+        font-size: 0.9em;
+    }
+
+    /* History Stats - Inline Grid */
     .history-stats {
-        grid-template-columns: 1fr;
-        gap: 15px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 15px;
     }
 
     .stat-card {
-        padding: 20px;
+        padding: 12px 8px;
     }
 
     .stat-value {
-        font-size: 2em;
+        font-size: 1.4em;
     }
 
     .stat-label {
-        font-size: 1em;
+        font-size: 0.75em;
     }
 
-    /* Section Header */
+    /* Section Header - Compact */
     .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
     }
 
     .section-header h2 {
-        font-size: 1.5em;
+        font-size: 1.2em;
+        margin: 0;
     }
 
     .section-header > div {
         display: flex;
-        gap: 10px;
-        width: 100%;
+        gap: 8px;
+        width: auto;
     }
 
     .section-header .btn {
-        flex: 1;
-        padding: 14px;
-        font-size: 1em;
+        flex: none;
+        padding: 10px 14px;
+        font-size: 0.85em;
     }
 
-    /* Scan History Table */
+    /* Scan History Table - Compact */
+    .scan-history-section {
+        margin-top: 20px;
+    }
+
     .scan-history-table {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        margin-top: 10px;
     }
 
     .scan-history-table table {
         min-width: 600px;
-        font-size: 0.9em;
+        font-size: 0.85em;
+    }
+
+    .scan-history-table th,
+    .scan-history-table td {
+        padding: 10px 6px;
     }
 }
