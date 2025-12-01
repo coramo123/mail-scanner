@@ -489,23 +489,54 @@ td em {
     .results-actions {
         display: flex;
         gap: 6px;
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
+        justify-content: flex-end;
     }
 
     .results-actions .btn {
         flex: none;
+        width: auto !important; /* Override the 100% width rule */
         min-width: auto;
         padding: 8px 12px;
         font-size: 0.8em;
         white-space: nowrap;
     }
 
-    /* Compact Table Display */
-    .results-container {
+    /* Compact Table Display with Scroll Indicator */
+    .results-table {
+        position: relative;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         margin: 0 -12px; /* Full width */
         padding: 0 12px;
+    }
+
+    /* Horizontal scroll indicator - gradient shadow on right */
+    .results-table::after {
+        content: '';
+        position: sticky;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 30px;
+        background: linear-gradient(to left, rgba(0,0,0,0.15), transparent);
+        pointer-events: none;
+        float: right;
+        height: 100%;
+    }
+
+    /* Visual hint text for scrolling */
+    .results-section::before {
+        content: '← Swipe to see all columns →';
+        display: block;
+        text-align: center;
+        font-size: 0.75em;
+        color: #667eea;
+        font-weight: 600;
+        padding: 8px;
+        background: #f8f9ff;
+        border-radius: 4px;
+        margin-bottom: 10px;
     }
 
     table {
@@ -529,13 +560,8 @@ td em {
         letter-spacing: 0.5px;
     }
 
-    /* Hide less important columns on very small screens */
-    @media (max-width: 480px) {
-        table th:nth-child(4),
-        table td:nth-child(4) {
-            display: none; /* Hide ZIP on very small screens */
-        }
-    }
+    /* Keep all columns visible - user can scroll horizontally */
+    /* Addresses are important and should always be visible */
 }
 
 /* Camera Modal */
