@@ -26,7 +26,26 @@ from supabase_client import (
     create_scan_result,
     get_user_scan_results,
     delete_scan_result,
-    clear_user_scan_results
+    clear_user_scan_results,
+    get_user_subscription,
+    create_user_subscription,
+    update_user_subscription,
+    increment_scan_count,
+    can_user_scan
+)
+
+# Import Stripe helpers
+from stripe_client import (
+    create_customer,
+    create_checkout_session,
+    get_subscription,
+    cancel_subscription,
+    update_subscription,
+    construct_webhook_event,
+    get_plan_info,
+    get_all_plans,
+    create_customer_portal_session,
+    STRIPE_PUBLISHABLE_KEY
 )
 
 app = Flask(__name__)
@@ -154,6 +173,24 @@ def upload_files():
     if not files or files[0].filename == '':
         return jsonify({'error': 'No files selected'}), 400
 
+    # Check scan limit before processing
+    success, subscription = get_user_subscription(user.id)
+    if not success:
+        return jsonify({'error': 'Failed to get subscription information'}), 500
+
+    # Check if user can scan
+    can_scan_success, can_scan = can_user_scan(user.id)
+    if not can_scan:
+        plan_info = get_plan_info(subscription.get('plan_type', 'free'))
+        return jsonify({
+            'error': 'Scan limit reached',
+            'message': f'You have reached your monthly limit of {plan_info["scan_limit"]} scans. Please upgrade your plan to continue scanning.',
+            'current_plan': subscription.get('plan_type', 'free'),
+            'scans_used': subscription.get('scans_this_month', 0),
+            'scan_limit': plan_info['scan_limit'],
+            'upgrade_url': url_for('account')
+        }), 403
+
     scanned_count = 0
     errors = []
     total_files = len(files)
@@ -161,6 +198,8 @@ def upload_files():
 
     print(f"\n{'='*60}")
     print(f"User: {user.email}")
+    print(f"Plan: {subscription.get('plan_type', 'free').upper()}")
+    print(f"Scans this month: {subscription.get('scans_this_month', 0)}")
     print(f"Starting batch upload: {total_files} files")
     print(f"{'='*60}\n")
 
@@ -227,6 +266,9 @@ def upload_files():
                 if success:
                     created_results.append(db_result)
                     scanned_count += 1
+
+                    # Increment scan count for the user
+                    increment_scan_count(user.id)
                 else:
                     errors.append(f"{filename}: Failed to save to database")
 
@@ -518,6 +560,239 @@ def create_address_pdf(addresses, output_path):
             c.drawString(x + 5, text_y, line)
 
     c.save()
+
+
+# Account & Subscription Routes
+
+@app.route('/account')
+@require_auth
+def account():
+    """Account management page"""
+    user = get_current_user()
+    success, subscription = get_user_subscription(user.id)
+
+    return render_template('account.html',
+                           user=user,
+                           subscription=subscription if success else None,
+                           stripe_key=STRIPE_PUBLISHABLE_KEY,
+                           plans=get_all_plans())
+
+
+@app.route('/api/subscription')
+@require_auth
+def get_subscription_api():
+    """Get user subscription via API"""
+    user = get_current_user()
+    success, subscription = get_user_subscription(user.id)
+
+    if success:
+        # Get plan information
+        plan_info = get_plan_info(subscription.get('plan_type', 'free'))
+
+        return jsonify({
+            'success': True,
+            'subscription': subscription,
+            'plan_info': plan_info
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'error': subscription.get('error', 'Failed to get subscription')
+        }), 500
+
+
+@app.route('/api/create-checkout-session', methods=['POST'])
+@require_auth
+def create_checkout_session_api():
+    """Create a Stripe checkout session"""
+    user = get_current_user()
+
+    try:
+        data = request.json
+        plan_type = data.get('plan_type')
+
+        if not plan_type or plan_type not in ['starter', 'growth', 'scale']:
+            return jsonify({'error': 'Invalid plan type'}), 400
+
+        # Get plan info
+        plan_info = get_plan_info(plan_type)
+        price_id = plan_info.get('stripe_price_id')
+
+        if not price_id:
+            return jsonify({'error': 'Plan not configured. Please add STRIPE_PRO_PRICE_ID and STRIPE_BUSINESS_PRICE_ID to your .env file'}), 500
+
+        # Get or create Stripe customer
+        success, subscription = get_user_subscription(user.id)
+
+        if not success or not subscription.get('stripe_customer_id'):
+            # Create new Stripe customer
+            customer = create_customer(user.email, user.id)
+            customer_id = customer.id
+
+            # Update subscription with customer ID
+            update_user_subscription(user.id, {'stripe_customer_id': customer_id})
+        else:
+            customer_id = subscription['stripe_customer_id']
+
+        # Create checkout session
+        success_url = url_for('account', _external=True) + '?success=true'
+        cancel_url = url_for('account', _external=True) + '?cancelled=true'
+
+        checkout_session = create_checkout_session(
+            customer_id,
+            price_id,
+            success_url,
+            cancel_url
+        )
+
+        return jsonify({
+            'success': True,
+            'sessionId': checkout_session.id
+        })
+
+    except Exception as e:
+        print(f"Error creating checkout session: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/cancel-subscription', methods=['POST'])
+@require_auth
+def cancel_subscription_api():
+    """Cancel user subscription"""
+    user = get_current_user()
+
+    try:
+        success, subscription = get_user_subscription(user.id)
+
+        if not success or not subscription.get('stripe_subscription_id'):
+            return jsonify({'error': 'No active subscription found'}), 400
+
+        # Cancel subscription at period end
+        cancel_subscription(subscription['stripe_subscription_id'], at_period_end=True)
+
+        # Update database
+        update_user_subscription(user.id, {'status': 'cancelled'})
+
+        return jsonify({
+            'success': True,
+            'message': 'Subscription will be cancelled at the end of the billing period'
+        })
+
+    except Exception as e:
+        print(f"Error cancelling subscription: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/customer-portal', methods=['POST'])
+@require_auth
+def customer_portal():
+    """Create Stripe Customer Portal session"""
+    user = get_current_user()
+
+    try:
+        success, subscription = get_user_subscription(user.id)
+
+        if not success or not subscription.get('stripe_customer_id'):
+            return jsonify({'error': 'No Stripe customer found'}), 400
+
+        return_url = url_for('account', _external=True)
+        portal_session = create_customer_portal_session(
+            subscription['stripe_customer_id'],
+            return_url
+        )
+
+        return jsonify({
+            'success': True,
+            'url': portal_session.url
+        })
+
+    except Exception as e:
+        print(f"Error creating portal session: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/stripe-webhook', methods=['POST'])
+def stripe_webhook():
+    """Handle Stripe webhooks"""
+    payload = request.data
+    sig_header = request.headers.get('Stripe-Signature')
+
+    try:
+        event = construct_webhook_event(payload, sig_header)
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return jsonify({'error': str(e)}), 400
+
+    # Handle different event types
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        handle_checkout_session_completed(session)
+
+    elif event['type'] == 'customer.subscription.updated':
+        subscription = event['data']['object']
+        handle_subscription_updated(subscription)
+
+    elif event['type'] == 'customer.subscription.deleted':
+        subscription = event['data']['object']
+        handle_subscription_deleted(subscription)
+
+    elif event['type'] == 'invoice.payment_failed':
+        invoice = event['data']['object']
+        handle_payment_failed(invoice)
+
+    return jsonify({'success': True})
+
+
+def handle_checkout_session_completed(session):
+    """Handle successful checkout"""
+    customer_id = session['customer']
+    subscription_id = session['subscription']
+
+    # Get subscription details from Stripe
+    stripe_subscription = get_subscription(subscription_id)
+
+    # Find user by customer ID
+    # Note: This requires a database lookup
+    # For now, we'll handle this in the webhook
+
+    print(f"Checkout completed for customer {customer_id}, subscription {subscription_id}")
+
+
+def handle_subscription_updated(subscription):
+    """Handle subscription updates"""
+    customer_id = subscription['customer']
+    subscription_id = subscription['id']
+    status = subscription['status']
+
+    # Determine plan type from price ID
+    price_id = subscription['items']['data'][0]['price']['id']
+    plan_type = 'pro'  # Default
+
+    # Map price ID to plan type
+    starter_price_id = os.getenv('STRIPE_STARTER_PRICE_ID')
+    growth_price_id = os.getenv('STRIPE_GROWTH_PRICE_ID')
+    scale_price_id = os.getenv('STRIPE_SCALE_PRICE_ID')
+
+    if price_id == starter_price_id:
+        plan_type = 'starter'
+    elif price_id == growth_price_id:
+        plan_type = 'growth'
+    elif price_id == scale_price_id:
+        plan_type = 'scale'
+
+    print(f"Subscription updated: {subscription_id}, status: {status}, plan: {plan_type}")
+
+
+def handle_subscription_deleted(subscription):
+    """Handle subscription cancellation"""
+    subscription_id = subscription['id']
+    print(f"Subscription deleted: {subscription_id}")
+
+
+def handle_payment_failed(invoice):
+    """Handle failed payment"""
+    customer_id = invoice['customer']
+    print(f"Payment failed for customer {customer_id}")
 
 
 if __name__ == '__main__':

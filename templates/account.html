@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account & Billing - Mail Scanner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <h1>Account & Billing</h1>
+                    <p class="subtitle">Manage your subscription and view scan history</p>
+                </div>
+                <div style="text-align: right;">
+                    <p style="color: white; margin-bottom: 8px; opacity: 0.9;">{{ user.email }}</p>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary btn-small" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; display: inline-block;">
+                            Back to Scanner
+                        </a>
+                        <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-small" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; display: inline-block;">
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="account-main">
+            {% if request.args.get('success') %}
+            <div class="alert alert-success">
+                Payment successful! Your subscription has been activated.
+            </div>
+            {% endif %}
+
+            {% if request.args.get('cancelled') %}
+            <div class="alert alert-info">
+                Payment cancelled. You can upgrade anytime.
+            </div>
+            {% endif %}
+
+            <!-- Subscription Overview Section -->
+            <section class="subscription-overview">
+                <h2>Current Subscription</h2>
+                <div class="subscription-card">
+                    <div class="subscription-header">
+                        <div>
+                            <h3 id="currentPlanName">{{ plans[subscription.plan_type].name if subscription else 'Free' }} Plan</h3>
+                            <p class="subscription-status" id="subscriptionStatus">
+                                {% if subscription and subscription.status == 'active' %}
+                                    <span class="status-badge status-active">Active</span>
+                                {% elif subscription and subscription.status == 'cancelled' %}
+                                    <span class="status-badge status-cancelled">Cancelled</span>
+                                {% else %}
+                                    <span class="status-badge status-active">Active</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="subscription-price">
+                            {% if subscription and plans[subscription.plan_type].price is none %}
+                                <span class="price-amount" id="currentPlanPrice">Custom</span>
+                                <span class="price-period">pricing</span>
+                            {% else %}
+                                <span class="price-amount" id="currentPlanPrice">
+                                    ${{ '%.0f'|format(plans[subscription.plan_type].price) if subscription else '0' }}
+                                </span>
+                                <span class="price-period">/month</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Usage Stats -->
+                    <div class="usage-stats">
+                        <h4>Monthly Usage</h4>
+                        <div class="usage-bar">
+                            <div class="usage-fill" id="usageBar" style="width: {{ ((subscription.scans_this_month / plans[subscription.plan_type].scan_limit) * 100) if subscription and subscription.plan_type != 'enterprise' else 0 }}%"></div>
+                        </div>
+                        <p class="usage-text">
+                            <span id="scansUsed">{{ subscription.scans_this_month if subscription else 0 }}</span> of
+                            <span id="scansLimit">{{ '{:,}'.format(plans[subscription.plan_type].scan_limit) if subscription and subscription.plan_type != 'enterprise' else 'unlimited' }}</span> scans used
+                        </p>
+                        {% if subscription and subscription.plan_type != 'enterprise' %}
+                            {% set usage_percent = (subscription.scans_this_month / plans[subscription.plan_type].scan_limit * 100) %}
+                            {% if usage_percent >= 80 %}
+                                <p class="usage-warning">You're approaching your monthly limit. Consider upgrading your plan.</p>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Billing Info -->
+                    {% if subscription and subscription.plan_type != 'free' %}
+                    <div class="billing-info">
+                        {% if subscription.current_period_end %}
+                        <p><strong>Next billing date:</strong> {{ subscription.current_period_end }}</p>
+                        {% endif %}
+                        {% if subscription.status == 'cancelled' %}
+                        <p class="cancel-notice">Your subscription will remain active until the end of the billing period.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="subscription-actions">
+                        <button id="manageSubscriptionBtn" class="btn btn-secondary">Manage Billing</button>
+                        {% if subscription.status == 'active' %}
+                        <button id="cancelSubscriptionBtn" class="btn btn-danger">Cancel Subscription</button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- Available Plans Section -->
+            <section class="plans-section">
+                <h2>Available Plans</h2>
+                <div class="plans-grid">
+                    {% for plan_key, plan in plans.items() %}
+                    <div class="plan-card {% if subscription and subscription.plan_type == plan_key %}plan-current{% endif %}">
+                        <div class="plan-header">
+                            <h3>{{ plan.name }}</h3>
+                            <div class="plan-price">
+                                {% if plan.price is none %}
+                                    <span class="price-amount">Custom</span>
+                                    <span class="price-period">pricing</span>
+                                {% else %}
+                                    <span class="price-amount">${{ '%.0f'|format(plan.price) }}</span>
+                                    <span class="price-period">/month</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <ul class="plan-features">
+                            {% for feature in plan.features %}
+                            <li><span class="checkmark">✓</span> {{ feature }}</li>
+                            {% endfor %}
+                        </ul>
+                        <div class="plan-action">
+                            {% if subscription and subscription.plan_type == plan_key %}
+                                <button class="btn btn-secondary" disabled>Current Plan</button>
+                            {% elif plan_key == 'free' %}
+                                {% if subscription and subscription.plan_type != 'free' %}
+                                    <button class="btn btn-secondary" disabled>Downgrade Unavailable</button>
+                                {% else %}
+                                    <button class="btn btn-secondary" disabled>Current Plan</button>
+                                {% endif %}
+                            {% elif plan_key == 'enterprise' %}
+                                <a href="mailto:sales@mailscanner.com?subject=Enterprise Plan Inquiry" class="btn btn-primary" style="text-decoration: none; display: inline-block; width: 100%; text-align: center;">
+                                    Contact Sales
+                                </a>
+                            {% else %}
+                                <button class="btn btn-primary upgrade-btn" data-plan="{{ plan_key }}">
+                                    {% if subscription and subscription.plan_type == 'free' %}
+                                        Upgrade to {{ plan.name }}
+                                    {% else %}
+                                        Switch to {{ plan.name }}
+                                    {% endif %}
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Scan History Section -->
+            <section class="scan-history-section">
+                <div class="section-header">
+                    <h2>Scan History</h2>
+                    <div>
+                        <button id="refreshHistoryBtn" class="btn btn-secondary btn-small">Refresh</button>
+                        <button id="exportHistoryBtn" class="btn btn-success btn-small">Export All</button>
+                    </div>
+                </div>
+
+                <div class="history-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalScans">{{ subscription.total_scans if subscription else 0 }}</div>
+                        <div class="stat-label">Total Scans</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="thisMonthScans">{{ subscription.scans_this_month if subscription else 0 }}</div>
+                        <div class="stat-label">This Month</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="lastScanDate">
+                            {% if subscription and subscription.last_scan_at %}
+                                {{ subscription.last_scan_at[:10] }}
+                            {% else %}
+                                Never
+                            {% endif %}
+                        </div>
+                        <div class="stat-label">Last Scan</div>
+                    </div>
+                </div>
+
+                <div id="scanHistoryTable" class="scan-history-table">
+                    <p>Loading scan history...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const stripe = Stripe('{{ stripe_key }}');
+        let currentSubscription = {{ subscription|tojson if subscription else 'null' }};
+
+        // Upgrade/downgrade plan
+        document.querySelectorAll('.upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const planType = this.getAttribute('data-plan');
+                const planName = this.textContent.trim();
+
+                if (!confirm(`Are you sure you want to upgrade to the ${planName}?`)) {
+                    return;
+                }
+
+                try {
+                    this.disabled = true;
+                    this.textContent = 'Processing...';
+
+                    const response = await fetch('/api/create-checkout-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ plan_type: planType })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Redirect to Stripe Checkout
+                        const result = await stripe.redirectToCheckout({
+                            sessionId: data.sessionId
+                        });
+
+                        if (result.error) {
+                            alert(result.error.message);
+                            this.disabled = false;
+                            this.textContent = planName;
+                        }
+                    } else {
+                        alert(data.error || 'Failed to create checkout session');
+                        this.disabled = false;
+                        this.textContent = planName;
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error creating checkout session');
+                    this.disabled = false;
+                    this.textContent = planName;
+                }
+            });
+        });
+
+        // Manage subscription (Stripe Customer Portal)
+        const manageBtn = document.getElementById('manageSubscriptionBtn');
+        if (manageBtn) {
+            manageBtn.addEventListener('click', async function() {
+                try {
+                    this.disabled = true;
+                    this.textContent = 'Loading...';
+
+                    const response = await fetch('/api/customer-portal', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        window.location.href = data.url;
+                    } else {
+                        alert(data.error || 'Failed to open billing portal');
+                        this.disabled = false;
+                        this.textContent = 'Manage Billing';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error opening billing portal');
+                    this.disabled = false;
+                    this.textContent = 'Manage Billing';
+                }
+            });
+        }
+
+        // Cancel subscription
+        const cancelBtn = document.getElementById('cancelSubscriptionBtn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', async function() {
+                if (!confirm('Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing period.')) {
+                    return;
+                }
+
+                try {
+                    this.disabled = true;
+                    this.textContent = 'Cancelling...';
+
+                    const response = await fetch('/api/cancel-subscription', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert(data.message);
+                        window.location.reload();
+                    } else {
+                        alert(data.error || 'Failed to cancel subscription');
+                        this.disabled = false;
+                        this.textContent = 'Cancel Subscription';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error cancelling subscription');
+                    this.disabled = false;
+                    this.textContent = 'Cancel Subscription';
+                }
+            });
+        }
+
+        // Load scan history
+        async function loadScanHistory() {
+            try {
+                const response = await fetch('/results');
+                const data = await response.json();
+
+                if (data.success) {
+                    displayScanHistory(data.results);
+                } else {
+                    document.getElementById('scanHistoryTable').innerHTML = '<p class="error">Failed to load scan history</p>';
+                }
+            } catch (error) {
+                console.error('Error loading scan history:', error);
+                document.getElementById('scanHistoryTable').innerHTML = '<p class="error">Error loading scan history</p>';
+            }
+        }
+
+        function displayScanHistory(scans) {
+            const container = document.getElementById('scanHistoryTable');
+
+            if (!scans || scans.length === 0) {
+                container.innerHTML = '<p class="no-results">No scans yet. Start scanning mail to see your history here!</p>';
+                return;
+            }
+
+            // Show only last 20 scans
+            const recentScans = scans.slice(0, 20);
+
+            const table = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Filename</th>
+                            <th>Sender</th>
+                            <th>Address</th>
+                            <th>Category</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${recentScans.map(scan => `
+                            <tr>
+                                <td>${new Date(scan.uploaded_at).toLocaleDateString()}</td>
+                                <td>${scan.filename}</td>
+                                <td>${scan.sender_name || '<em>Not found</em>'}</td>
+                                <td>${scan.verified_full_address || scan.full_address || '<em>Not found</em>'}</td>
+                                <td>${scan.category || '<em>Not found</em>'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ${scans.length > 20 ? `<p style="text-align: center; margin-top: 20px; color: #666;">Showing 20 most recent scans. <a href="${'{{ url_for("index") }}'}">View all results</a></p>` : ''}
+            `;
+
+            container.innerHTML = table;
+        }
+
+        // Refresh history
+        document.getElementById('refreshHistoryBtn').addEventListener('click', loadScanHistory);
+
+        // Export history
+        document.getElementById('exportHistoryBtn').addEventListener('click', function() {
+            window.location.href = '/export/csv';
+        });
+
+        // Load scan history on page load
+        loadScanHistory();
+    </script>
+</body>
+</html>

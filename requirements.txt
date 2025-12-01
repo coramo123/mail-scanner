@@ -29,5 +29,8 @@ smartystreets-python-sdk>=4.15.0
 supabase>=2.0.0
 httpx>=0.24.0
 
+# Payment Processing
+stripe>=7.0.0
+
 # Production Server
 gunicorn>=21.2.0

@@ -112,9 +112,14 @@ def require_auth(f):
     def decorated_function(*args, **kwargs):
         user = get_current_user()
         if user is None:
-            # Return JSON for API endpoints
-            if '/api/' in str(f):
-                return jsonify({'error': 'Authentication required'}), 401
+            from flask import request
+            # Return JSON for AJAX/API requests or API endpoints
+            is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+            is_json_request = request.accept_mimetypes.best == 'application/json'
+            is_api_endpoint = '/api/' in request.path or request.path in ['/upload', '/results', '/clear'] or request.path.startswith('/delete/')
+
+            if is_ajax or is_json_request or is_api_endpoint:
+                return jsonify({'error': 'Authentication required', 'redirect': url_for('login')}), 401
             # Redirect to login for page routes
             return redirect(url_for('login'))
         return f(*args, **kwargs)
@@ -349,3 +354,157 @@ def clear_user_scan_results(user_id):
     except Exception as e:
         print(f"Error clearing scan results: {e}")
         return False, {'error': str(e)}
+
+
+# Subscription Management Functions
+
+def get_user_subscription(user_id):
+    """
+    Get user subscription details
+    Returns: (success: bool, data/error: dict)
+    """
+    try:
+        # Get access token from session
+        access_token = session.get('access_token')
+        if not access_token:
+            return False, {'error': 'Not authenticated'}
+
+        # Create authenticated client
+        auth_supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        auth_supabase.auth.set_session(access_token, session.get('refresh_token'))
+
+        response = auth_supabase.table('user_subscriptions') \
+            .select('*') \
+            .eq('user_id', str(user_id)) \
+            .execute()
+
+        if response.data and len(response.data) > 0:
+            return True, response.data[0]
+        else:
+            # No subscription found, create free tier
+            success, subscription = create_user_subscription(user_id, 'free')
+            return success, subscription
+
+    except Exception as e:
+        print(f"Error getting subscription: {e}")
+        return False, {'error': str(e)}
+
+
+def create_user_subscription(user_id, plan_type='free'):
+    """
+    Create a new user subscription
+    Returns: (success: bool, data/error: dict)
+    """
+    try:
+        # Get access token from session
+        access_token = session.get('access_token')
+        if not access_token:
+            return False, {'error': 'Not authenticated'}
+
+        # Create authenticated client
+        auth_supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        auth_supabase.auth.set_session(access_token, session.get('refresh_token'))
+
+        subscription_data = {
+            'user_id': str(user_id),
+            'plan_type': plan_type,
+            'status': 'active',
+            'scans_this_month': 0,
+            'total_scans': 0
+        }
+
+        response = auth_supabase.table('user_subscriptions') \
+            .insert(subscription_data) \
+            .execute()
+
+        if response.data:
+            return True, response.data[0]
+        else:
+            return False, {'error': 'Failed to create subscription'}
+
+    except Exception as e:
+        print(f"Error creating subscription: {e}")
+        return False, {'error': str(e)}
+
+
+def update_user_subscription(user_id, update_data):
+    """
+    Update user subscription
+    Returns: (success: bool, data/error: dict)
+    """
+    try:
+        # Get access token from session
+        access_token = session.get('access_token')
+        if not access_token:
+            return False, {'error': 'Not authenticated'}
+
+        # Create authenticated client
+        auth_supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        auth_supabase.auth.set_session(access_token, session.get('refresh_token'))
+
+        response = auth_supabase.table('user_subscriptions') \
+            .update(update_data) \
+            .eq('user_id', str(user_id)) \
+            .execute()
+
+        if response.data:
+            return True, response.data[0]
+        else:
+            return False, {'error': 'Failed to update subscription'}
+
+    except Exception as e:
+        print(f"Error updating subscription: {e}")
+        return False, {'error': str(e)}
+
+
+def increment_scan_count(user_id):
+    """
+    Increment the user's scan count
+    Returns: (success: bool, data/error: dict)
+    """
+    try:
+        # Get access token from session
+        access_token = session.get('access_token')
+        if not access_token:
+            return False, {'error': 'Not authenticated'}
+
+        # Create authenticated client
+        auth_supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        auth_supabase.auth.set_session(access_token, session.get('refresh_token'))
+
+        # Call the database function
+        response = auth_supabase.rpc('increment_scan_count', {'p_user_id': str(user_id)}).execute()
+
+        return True, {'message': 'Scan count incremented'}
+
+    except Exception as e:
+        print(f"Error incrementing scan count: {e}")
+        return False, {'error': str(e)}
+
+
+def can_user_scan(user_id):
+    """
+    Check if user can perform a scan (hasn't exceeded limit)
+    Returns: (success: bool, can_scan: bool)
+    """
+    try:
+        # Get access token from session
+        access_token = session.get('access_token')
+        if not access_token:
+            return False, False
+
+        # Create authenticated client
+        auth_supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        auth_supabase.auth.set_session(access_token, session.get('refresh_token'))
+
+        # Call the database function
+        response = auth_supabase.rpc('can_user_scan', {'p_user_id': str(user_id)}).execute()
+
+        if response.data is not None:
+            return True, response.data
+        else:
+            return False, False
+
+    except Exception as e:
+        print(f"Error checking scan limit: {e}")
+        return False, False

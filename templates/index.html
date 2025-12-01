@@ -16,9 +16,14 @@
                 </div>
                 <div style="text-align: right;">
                     <p style="color: white; margin-bottom: 8px; opacity: 0.9;">{{ user.email }}</p>
-                    <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-small" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; display: inline-block;">
-                        Logout
-                    </a>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="{{ url_for('account') }}" class="btn btn-secondary btn-small" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; display: inline-block;">
+                            Account & Billing
+                        </a>
+                        <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-small" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; display: inline-block;">
+                            Logout
+                        </a>
+                    </div>
                 </div>
             </div>
         </header>
@@ -47,6 +52,15 @@
                     <p class="upload-subtext">Supports: JPG, PNG, WEBP, GIF, HEIC - Upload as many files as you want!</p>
                     <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif" hidden>
                 </div>
+
+                <!-- Camera Button -->
+                <button id="openCameraBtn" class="btn btn-secondary btn-main" style="margin-top: 15px;">
+                    <svg style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                    Take Photo with Camera
+                </button>
 
                 <button id="scanAllButton" class="btn btn-primary btn-main" disabled>
                     Scan Photos
@@ -103,6 +117,36 @@
             </section>
             </section>
         </main>
+
+        <!-- Camera Modal -->
+        <div id="cameraModal" class="camera-modal" style="display: none;">
+            <div class="camera-modal-content">
+                <div class="camera-header">
+                    <h3>Take a Photo</h3>
+                    <button id="closeCameraBtn" class="close-camera-btn">&times;</button>
+                </div>
+                <div class="camera-container">
+                    <video id="cameraVideo" autoplay playsinline></video>
+                    <canvas id="cameraCanvas" style="display: none;"></canvas>
+                </div>
+                <div class="camera-controls">
+                    <button id="captureBtn" class="btn btn-primary">
+                        <svg style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                        </svg>
+                        Capture Photo
+                    </button>
+                    <button id="switchCameraBtn" class="btn btn-secondary" style="display: none;">
+                        <svg style="width: 20px; height: 20px; vertical-align: middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 2h2a2 2 0 0 1 2 2v2M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        Switch Camera
+                    </button>
+                </div>
+                <p class="camera-hint">Position the mail piece within the frame and tap Capture</p>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -310,7 +354,20 @@
                     body: formData
                 });
 
+                // Check if response is OK before parsing JSON
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(`Server error (${response.status}): ${text.substring(0, 200)}`);
+                }
+
                 const data = await response.json();
+
+                // Check for authentication error
+                if (response.status === 401 || data.error === 'Authentication required') {
+                    alert('Your session has expired. Please log in again.');
+                    window.location.href = data.redirect || '/login';
+                    return;
+                }
 
                 if (data.success) {
                     progressBar.style.width = '100%';
@@ -406,10 +463,18 @@
 
                             // Verification status badge
                             let verificationBadge = '';
-                            if (result.verification_status === 'verified' || result.verification_status === 'verified_missing_secondary') {
-                                verificationBadge = '<span style="color: #28a745; font-weight: bold;">Verified</span>';
+                            if (result.verification_status === 'verified') {
+                                verificationBadge = '<span style="color: #28a745; font-weight: bold;">✓ Verified</span>';
+                            } else if (result.verification_status === 'verified_missing_secondary') {
+                                verificationBadge = '<span style="color: #28a745; font-weight: bold;">✓ Verified</span><br><small style="color: #6c757d;">(missing unit #)</small>';
+                            } else if (result.verification_status === 'unverified') {
+                                verificationBadge = '<span style="color: #ffc107; font-weight: bold;">⚠ Unverified</span><br><small style="color: #6c757d;">(not in USPS DB)</small>';
+                            } else if (result.verification_status === 'no_confirmation') {
+                                verificationBadge = '<span style="color: #6c757d; font-weight: bold;">○ No Confirmation</span>';
+                            } else if (result.verification_status === 'insufficient_data') {
+                                verificationBadge = '<span style="color: #6c757d; font-weight: bold;">○ Incomplete</span>';
                             } else {
-                                verificationBadge = '<span style="color: #dc3545; font-weight: bold;">Failed</span>';
+                                verificationBadge = '<span style="color: #dc3545; font-weight: bold;">✗ Failed</span>';
                             }
 
                             return `
@@ -592,6 +657,215 @@
             const ids = Array.from(selectedResults);
             const url = `/export/print-pdf?ids=${ids.join(',')}`;
             window.open(url, '_blank');
+        });
+
+        // ==================== CAMERA FUNCTIONALITY ====================
+
+        // Camera elements
+        const cameraModal = document.getElementById('cameraModal');
+        const openCameraBtn = document.getElementById('openCameraBtn');
+        const closeCameraBtn = document.getElementById('closeCameraBtn');
+        const cameraVideo = document.getElementById('cameraVideo');
+        const cameraCanvas = document.getElementById('cameraCanvas');
+        const captureBtn = document.getElementById('captureBtn');
+        const switchCameraBtn = document.getElementById('switchCameraBtn');
+
+        let currentStream = null;
+        let currentFacingMode = 'environment'; // Start with back camera on mobile
+        let capturedPhotoCount = 0;
+
+        // Check if device has camera
+        async function checkCameraSupport() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                let message = 'Camera access is not supported.\n\n';
+
+                // Check if it's an HTTPS issue
+                if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    message += 'Camera access requires HTTPS (secure connection).\n\n';
+                    message += 'To use the camera:\n';
+                    message += '1. Access this site via HTTPS, or\n';
+                    message += '2. Use the "Browse" button to upload photos\n\n';
+                } else {
+                    message += 'Your browser does not support camera access.\n\n';
+                    message += 'Try using:\n';
+                    message += '• Chrome or Safari on iOS\n';
+                    message += '• Chrome or Firefox on Android\n';
+                    message += '• Chrome, Firefox, or Edge on desktop\n\n';
+                }
+
+                message += 'You can still upload photos using the "Browse" button above.';
+                alert(message);
+                return false;
+            }
+
+            return true; // We'll check actual camera access when opening
+        }
+
+        // Enumerate cameras after getting permission
+        async function enumerateCameras() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+                // Show switch camera button if multiple cameras available
+                if (videoDevices.length > 1) {
+                    switchCameraBtn.style.display = 'inline-block';
+                } else {
+                    switchCameraBtn.style.display = 'none';
+                }
+
+                return videoDevices.length > 0;
+            } catch (error) {
+                console.error('Error enumerating cameras:', error);
+                return false;
+            }
+        }
+
+        // Open camera
+        async function openCamera() {
+            const hasSupport = await checkCameraSupport();
+            if (!hasSupport) return;
+
+            try {
+                // Stop any existing stream
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+
+                // Request camera access with appropriate constraints
+                const constraints = {
+                    video: {
+                        facingMode: currentFacingMode,
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
+                    audio: false
+                };
+
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                cameraVideo.srcObject = currentStream;
+
+                // Enumerate cameras after getting permission
+                await enumerateCameras();
+
+                // Show modal
+                cameraModal.style.display = 'flex';
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+
+                let errorMessage = 'Could not access camera.\n\n';
+
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    errorMessage += 'Camera permission was denied. Please:\n1. Check your browser settings\n2. Allow camera access for this site\n3. Try again';
+                } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                    errorMessage += 'No camera found on this device.\n\nPlease use the "Browse" button to upload photos instead.';
+                } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                    errorMessage += 'Camera is already in use by another application.\n\nPlease close other apps using the camera and try again.';
+                } else if (error.name === 'OverconstrainedError') {
+                    errorMessage += 'Camera does not meet the required specifications.\n\nTrying with default settings...';
+                    // Retry with simpler constraints
+                    try {
+                        currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                        cameraVideo.srcObject = currentStream;
+                        await enumerateCameras();
+                        cameraModal.style.display = 'flex';
+                        return;
+                    } catch (retryError) {
+                        errorMessage += '\n\nStill failed. Please use the "Browse" button instead.';
+                    }
+                } else if (error.name === 'NotSupportedError') {
+                    errorMessage += 'Camera is not supported in this browser.\n\nPlease use Chrome, Safari, or Firefox.';
+                } else {
+                    errorMessage += 'Error: ' + error.message + '\n\nPlease use the "Browse" button to upload photos instead.';
+                }
+
+                alert(errorMessage);
+            }
+        }
+
+        // Close camera
+        function closeCamera() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+            cameraVideo.srcObject = null;
+            cameraModal.style.display = 'none';
+        }
+
+        // Switch camera (front/back)
+        async function switchCamera() {
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+
+            // Close current stream first
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+
+            await openCamera();
+        }
+
+        // Capture photo
+        function capturePhoto() {
+            // Set canvas size to match video
+            cameraCanvas.width = cameraVideo.videoWidth;
+            cameraCanvas.height = cameraVideo.videoHeight;
+
+            // Draw current video frame to canvas
+            const context = cameraCanvas.getContext('2d');
+            context.drawImage(cameraVideo, 0, 0);
+
+            // Convert canvas to blob
+            cameraCanvas.toBlob(async (blob) => {
+                if (!blob) {
+                    alert('Failed to capture photo');
+                    return;
+                }
+
+                // Create a File object from the blob
+                capturedPhotoCount++;
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `camera-capture-${timestamp}.jpg`;
+                const file = new File([blob], filename, { type: 'image/jpeg' });
+
+                // Add unique ID for tracking
+                file.uniqueId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                file.isChecked = true;
+
+                // Add to selected files
+                selectedFiles.push(file);
+
+                // Update UI
+                displaySelectedFiles();
+                updateButtonStates();
+
+                // Close camera and switch to scan view
+                closeCamera();
+
+                // Show success message
+                alert(`Photo captured! Added to upload queue (${selectedFiles.length} total files)`);
+            }, 'image/jpeg', 0.92);
+        }
+
+        // Event listeners for camera
+        openCameraBtn.addEventListener('click', openCamera);
+        closeCameraBtn.addEventListener('click', closeCamera);
+        captureBtn.addEventListener('click', capturePhoto);
+        switchCameraBtn.addEventListener('click', switchCamera);
+
+        // Close modal when clicking outside
+        cameraModal.addEventListener('click', (e) => {
+            if (e.target === cameraModal) {
+                closeCamera();
+            }
+        });
+
+        // Cleanup camera stream when page unloads
+        window.addEventListener('beforeunload', () => {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
         });
     </script>
 </body>

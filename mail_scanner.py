@@ -243,18 +243,38 @@ class MailScanner:
             analysis = candidate.analysis
             dpv_match_code = analysis.dpv_match_code
 
+            # Debug logging
+            print(f"Smarty verification - DPV Match Code: {dpv_match_code}")
+            print(f"  Active: {analysis.active}")
+            print(f"  DPV Footnotes: {analysis.dpv_footnotes}")
+
             if dpv_match_code == 'Y':
+                # Y = Confirmed valid address
                 verification_status = 'verified'
                 verified = True
             elif dpv_match_code == 'D':
+                # D = Valid but missing secondary (apartment/unit number)
                 verification_status = 'verified_missing_secondary'
                 verified = True
             elif dpv_match_code == 'S':
+                # S = Valid but missing secondary, alternative match
                 verification_status = 'verified_missing_secondary'
                 verified = True
-            else:
-                verification_status = 'failed'
+            elif dpv_match_code == 'N':
+                # N = Not found in USPS database (may still be a real address)
+                verification_status = 'unverified'
                 verified = False
+                print(f"  Address not found in USPS database - showing as unverified")
+            elif dpv_match_code == '':
+                # Empty = No DPV confirmation available
+                verification_status = 'no_confirmation'
+                verified = False
+                print(f"  No DPV confirmation available")
+            else:
+                # Unknown code
+                verification_status = 'unknown'
+                verified = False
+                print(f"  WARNING: Unknown DPV match code '{dpv_match_code}'")
 
             return {
                 'verified': verified,
@@ -362,6 +382,10 @@ class MailScanner:
             # Generate response
             response = self.model.generate_content([prompt, image])
 
+            # Check if response has text
+            if not response.text or len(response.text.strip()) == 0:
+                raise ValueError("Gemini returned empty response")
+
             # Parse JSON from response
             result = self._parse_gemini_response(response.text)
             result['method'] = 'gemini'
@@ -378,10 +402,12 @@ class MailScanner:
             return result
 
         except Exception as e:
+            import traceback
             print(f"Gemini scan failed: {e}")
+            print(f"Full error: {traceback.format_exc()}")
             if TESSERACT_AVAILABLE:
                 print("Falling back to Tesseract...")
-                return self._scan_with_tesseract(image_path)
+                return self._scan_with_tesseract(image_source)
             else:
                 raise
 
