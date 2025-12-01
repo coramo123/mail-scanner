@@ -42,33 +42,41 @@
             <!-- Upload Section -->
             <section id="scanView" class="tab-content active">
             <section class="upload-section">
-                <div class="upload-area" id="uploadArea">
-                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="17 8 12 3 7 8"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
-                    <p class="upload-text">Drop mail photos here or click to browse</p>
-                    <p class="upload-subtext">Supports: JPG, PNG, WEBP, GIF, HEIC - Upload as many files as you want!</p>
-                    <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif" hidden>
+                <!-- Combined Input Methods -->
+                <div class="input-methods">
+                    <!-- Camera Button -->
+                    <button id="openCameraBtn" class="btn btn-primary input-method-btn">
+                        <svg style="width: 24px; height: 24px; margin-bottom: 8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                        <span>Take Photo</span>
+                    </button>
+
+                    <!-- Upload Button -->
+                    <div class="upload-area input-method-btn" id="uploadArea">
+                        <svg class="upload-icon" style="width: 24px; height: 24px; margin-bottom: 8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span>Drop or Browse Images</span>
+                        <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif" hidden>
+                    </div>
                 </div>
 
-                <!-- Camera Button -->
-                <button id="openCameraBtn" class="btn btn-secondary btn-main" style="margin-top: 15px;">
-                    <svg style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                        <circle cx="12" cy="13" r="4"></circle>
-                    </svg>
-                    Take Photo with Camera
-                </button>
+                <!-- Selected Files List -->
+                <div id="selectedFiles" class="selected-files"></div>
 
+                <!-- Main Scan Button -->
                 <button id="scanAllButton" class="btn btn-primary btn-main" disabled>
                     Scan Photos
                 </button>
 
-                <div class="scan-controls-secondary" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; justify-content: center;">
+                <!-- Secondary Controls -->
+                <div class="scan-controls-secondary">
                     <button id="scanSelectedButton" class="btn btn-secondary btn-small" disabled>
-                        Scan Selected Photos
+                        Scan Selected
                     </button>
                     <button id="selectAllFilesButton" class="btn btn-secondary btn-small" disabled>
                         Select All
@@ -77,8 +85,6 @@
                         Deselect All
                     </button>
                 </div>
-
-                <div id="selectedFiles" class="selected-files"></div>
             </section>
 
             <!-- Progress Section -->
