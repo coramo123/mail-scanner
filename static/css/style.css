@@ -348,45 +348,103 @@ td em {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    /* Make everything more spacious and touch-friendly */
+    body {
+        font-size: 16px; /* Prevent iOS zoom on inputs */
+    }
+
+    .container {
+        padding: 0;
+    }
+
+    header {
+        padding: 20px 15px;
+    }
+
     header h1 {
-        font-size: 2em;
+        font-size: 1.8em;
+        margin-bottom: 5px;
+    }
+
+    header p {
+        font-size: 0.95em;
     }
 
     .tabs {
-        flex-direction: column;
+        flex-direction: row;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 10px;
     }
 
     .tab-button {
-        padding: 15px;
+        padding: 18px 25px; /* Larger touch targets */
+        font-size: 1.05em;
+        min-width: 120px;
+        white-space: nowrap;
     }
 
     main {
-        padding: 20px;
+        padding: 20px 15px;
     }
 
     .upload-area {
-        padding: 40px 20px;
+        padding: 50px 20px;
+        min-height: 250px;
+    }
+
+    .upload-area h2 {
+        font-size: 1.3em;
+        margin-bottom: 15px;
+    }
+
+    .upload-area p {
+        font-size: 1em;
+        margin-bottom: 25px;
+    }
+
+    /* Bigger, more touch-friendly buttons */
+    .btn {
+        width: 100%;
+        padding: 18px 24px;
+        font-size: 1.1em;
+        min-height: 52px; /* Minimum touch target */
+        margin-bottom: 10px;
+    }
+
+    .btn-main {
+        padding: 20px 24px;
+        font-size: 1.15em;
     }
 
     .results-header {
         flex-direction: column;
         align-items: stretch;
+        gap: 15px;
+    }
+
+    .results-header h2 {
+        font-size: 1.5em;
     }
 
     .results-actions {
         flex-direction: column;
+        gap: 10px;
     }
 
-    .btn {
-        width: 100%;
+    /* Make tables scroll horizontally on mobile */
+    .results-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     table {
-        font-size: 0.85em;
+        font-size: 0.9em;
+        min-width: 600px; /* Force horizontal scroll */
     }
 
     th, td {
-        padding: 10px;
+        padding: 12px 8px;
     }
 }
 
@@ -828,35 +886,132 @@ td em {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+    /* Account Header */
+    header > div {
+        flex-direction: column !important;
+        gap: 20px;
+        align-items: flex-start !important;
+    }
+
+    header > div > div {
+        width: 100%;
+        text-align: left !important;
+    }
+
+    header > div > div > div {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    header .btn-small {
+        width: 100% !important;
+        padding: 14px !important;
+        font-size: 1em !important;
+        text-align: center !important;
+    }
+
     .account-main {
-        padding: 20px;
+        padding: 15px;
+    }
+
+    /* Subscription Overview */
+    .subscription-card {
+        padding: 20px 15px;
     }
 
     .subscription-header {
         flex-direction: column;
+        gap: 15px;
+    }
+
+    .subscription-header h3 {
+        font-size: 1.5em;
     }
 
     .subscription-price {
         text-align: left;
-        margin-top: 15px;
+        margin-top: 0;
     }
 
+    .price-amount {
+        font-size: 2em;
+    }
+
+    /* Usage Stats */
+    .usage-stats h4 {
+        font-size: 1.1em;
+    }
+
+    .usage-text {
+        font-size: 1em;
+    }
+
+    /* Plans Grid - Stack cards vertically */
     .plans-grid {
         grid-template-columns: 1fr;
+        gap: 20px;
     }
 
+    .plan-card {
+        padding: 25px 20px;
+    }
+
+    .plan-header h3 {
+        font-size: 1.4em;
+    }
+
+    .plan-price .price-amount {
+        font-size: 2.2em;
+    }
+
+    .plan-features {
+        font-size: 1em;
+        margin: 20px 0;
+    }
+
+    .plan-features li {
+        padding: 10px 0;
+    }
+
+    /* Subscription Actions */
     .subscription-actions {
         flex-direction: column;
+        gap: 12px;
     }
 
+    .subscription-actions .btn {
+        width: 100%;
+        padding: 16px;
+        font-size: 1.05em;
+    }
+
+    /* History Stats */
     .history-stats {
         grid-template-columns: 1fr;
+        gap: 15px;
     }
 
+    .stat-card {
+        padding: 20px;
+    }
+
+    .stat-value {
+        font-size: 2em;
+    }
+
+    .stat-label {
+        font-size: 1em;
+    }
+
+    /* Section Header */
     .section-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 15px;
+    }
+
+    .section-header h2 {
+        font-size: 1.5em;
     }
 
     .section-header > div {
@@ -867,5 +1022,18 @@ td em {
 
     .section-header .btn {
         flex: 1;
+        padding: 14px;
+        font-size: 1em;
+    }
+
+    /* Scan History Table */
+    .scan-history-table {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .scan-history-table table {
+        min-width: 600px;
+        font-size: 0.9em;
     }
 }
