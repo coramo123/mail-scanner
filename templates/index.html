@@ -9,38 +9,40 @@
 <body>
     <div class="container">
         <header>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
+            <div class="header-content">
+                <div class="header-left">
                     <h1>Mail Scanner</h1>
                     <p class="subtitle">From your mailbox to theirs in minutes</p>
                 </div>
-                <div class="account-menu-container">
-                    <button class="account-menu-trigger" onclick="toggleAccountMenu()">
-                        <svg style="width: 20px; height: 20px; vertical-align: middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                        <span class="account-email">{{ user.email }}</span>
-                        <svg class="dropdown-arrow" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </button>
-                    <div class="account-dropdown" id="accountDropdown">
-                        <a href="{{ url_for('account') }}" class="account-dropdown-item">
-                            <svg style="width: 18px; height: 18px; margin-right: 10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="3"></circle>
-                                <path d="M12 1v6m0 6v6m6-12l-6 6m0 0L6 7m12 12l-6-6m0 0l-6 6"></path>
+                <div class="header-right">
+                    <div class="account-menu-container">
+                        <button class="account-menu-trigger" onclick="toggleAccountMenu(event)">
+                            <svg style="width: 20px; height: 20px; vertical-align: middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
                             </svg>
-                            Account & Billing
-                        </a>
-                        <a href="{{ url_for('logout') }}" class="account-dropdown-item">
-                            <svg style="width: 18px; height: 18px; margin-right: 10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                                <polyline points="16 17 21 12 16 7"></polyline>
-                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                            <span class="account-email">{{ user.email }}</span>
+                            <svg class="dropdown-arrow" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
-                            Logout
-                        </a>
+                        </button>
+                        <div class="account-dropdown" id="accountDropdown">
+                            <a href="{{ url_for('account') }}" class="account-dropdown-item">
+                                <svg style="width: 18px; height: 18px; margin-right: 10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M12 1v6m0 6v6m6-12l-6 6m0 0L6 7m12 12l-6-6m0 0l-6 6"></path>
+                                </svg>
+                                Account & Billing
+                            </a>
+                            <a href="{{ url_for('logout') }}" class="account-dropdown-item">
+                                <svg style="width: 18px; height: 18px; margin-right: 10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                    <polyline points="16 17 21 12 16 7"></polyline>
+                                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                                </svg>
+                                Logout
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -160,6 +162,13 @@
                         </svg>
                         Capture Photo
                     </button>
+                    <button id="autoCaptureBtn" class="btn btn-success" onclick="toggleAutoCapture()">
+                        <svg style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        Auto-Capture
+                    </button>
                     <button id="switchCameraBtn" class="btn btn-secondary" style="display: none;">
                         <svg style="width: 20px; height: 20px; vertical-align: middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M17 2h2a2 2 0 0 1 2 2v2M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -168,7 +177,8 @@
                         Switch Camera
                     </button>
                 </div>
-                <p class="camera-hint">Position the mail piece within the frame and tap Capture</p>
+                <p class="camera-hint" id="cameraHint">Position the mail piece within the frame and tap Capture</p>
+                <p class="camera-hint" id="autoHint" style="display: none; color: #4CAF50; font-weight: bold;">Auto-Capture Active - Hold steady on the address...</p>
             </div>
         </div>
     </div>
@@ -697,6 +707,8 @@
         let currentStream = null;
         let currentFacingMode = 'environment'; // Start with back camera on mobile
         let capturedPhotoCount = 0;
+        let autoCaptureActive = false;
+        let autoCaptureInterval = null;
 
         // Check if device has camera
         async function checkCameraSupport() {
@@ -807,14 +819,112 @@
             }
         }
 
+        // Toggle Auto-Capture
+        function toggleAutoCapture() {
+            autoCaptureActive = !autoCaptureActive;
+            const autoCaptureBtn = document.getElementById('autoCaptureBtn');
+            const cameraHint = document.getElementById('cameraHint');
+            const autoHint = document.getElementById('autoHint');
+
+            if (autoCaptureActive) {
+                autoCaptureBtn.textContent = 'Stop Auto-Capture';
+                autoCaptureBtn.classList.remove('btn-success');
+                autoCaptureBtn.classList.add('btn-danger');
+                cameraHint.style.display = 'none';
+                autoHint.style.display = 'block';
+                startAutoCapture();
+            } else {
+                autoCaptureBtn.textContent = 'Auto-Capture';
+                autoCaptureBtn.classList.remove('btn-danger');
+                autoCaptureBtn.classList.add('btn-success');
+                cameraHint.style.display = 'block';
+                autoHint.style.display = 'none';
+                stopAutoCapture();
+            }
+        }
+
+        // Start auto-capture detection
+        function startAutoCapture() {
+            // Check every 2 seconds
+            autoCaptureInterval = setInterval(async () => {
+                await checkForAddress();
+            }, 2000);
+        }
+
+        // Stop auto-capture detection
+        function stopAutoCapture() {
+            if (autoCaptureInterval) {
+                clearInterval(autoCaptureInterval);
+                autoCaptureInterval = null;
+            }
+        }
+
+        // Check if camera is showing a readable address
+        async function checkForAddress() {
+            try {
+                // Capture current frame
+                cameraCanvas.width = cameraVideo.videoWidth;
+                cameraCanvas.height = cameraVideo.videoHeight;
+                const context = cameraCanvas.getContext('2d');
+                context.drawImage(cameraVideo, 0, 0);
+
+                // Convert to blob
+                const blob = await new Promise(resolve => {
+                    cameraCanvas.toBlob(resolve, 'image/jpeg', 0.7);
+                });
+
+                // Send to backend for quick analysis
+                const formData = new FormData();
+                formData.append('frame', blob, 'frame.jpg');
+
+                const response = await fetch('/check-address', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                // If address detected, auto-capture
+                if (data.has_address) {
+                    console.log('Address detected! Auto-capturing...');
+                    stopAutoCapture();
+                    autoCaptureActive = false;
+
+                    // Reset button state
+                    const autoCaptureBtn = document.getElementById('autoCaptureBtn');
+                    autoCaptureBtn.textContent = 'Auto-Capture';
+                    autoCaptureBtn.classList.remove('btn-danger');
+                    autoCaptureBtn.classList.add('btn-success');
+                    document.getElementById('cameraHint').style.display = 'block';
+                    document.getElementById('autoHint').style.display = 'none';
+
+                    // Capture the photo
+                    capturePhoto();
+                }
+            } catch (error) {
+                console.error('Error checking for address:', error);
+            }
+        }
+
         // Close camera
         function closeCamera() {
+            stopAutoCapture(); // Stop auto-capture if active
+            autoCaptureActive = false;
+
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
                 currentStream = null;
             }
             cameraVideo.srcObject = null;
             cameraModal.style.display = 'none';
+
+            // Reset button states
+            const autoCaptureBtn = document.getElementById('autoCaptureBtn');
+            autoCaptureBtn.textContent = 'Auto-Capture';
+            autoCaptureBtn.classList.remove('btn-danger');
+            autoCaptureBtn.classList.add('btn-success');
+            document.getElementById('cameraHint').style.display = 'block';
+            document.getElementById('autoHint').style.display = 'none';
         }
 
         // Switch camera (front/back)
@@ -894,15 +1004,18 @@
 
         // ==================== ACCOUNT MENU ====================
 
-        function toggleAccountMenu() {
+        function toggleAccountMenu(event) {
+            event.stopPropagation();
             const dropdown = document.getElementById('accountDropdown');
             dropdown.classList.toggle('show');
         }
 
         // Close dropdown when clicking outside
-        window.addEventListener('click', (e) => {
-            if (!e.target.closest('.account-menu-container')) {
-                const dropdown = document.getElementById('accountDropdown');
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('accountDropdown');
+            const container = document.querySelector('.account-menu-container');
+
+            if (!container.contains(e.target)) {
                 dropdown.classList.remove('show');
             }
         });

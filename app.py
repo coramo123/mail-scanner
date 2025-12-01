@@ -304,6 +304,59 @@ def upload_files():
     return jsonify(response)
 
 
+@app.route('/check-address', methods=['POST'])
+@require_auth
+def check_address():
+    """Quick check if camera frame contains a readable address"""
+    try:
+        if 'frame' not in request.files:
+            return jsonify({'has_address': False})
+
+        frame = request.files['frame']
+
+        if not frame or frame.filename == '':
+            return jsonify({'has_address': False})
+
+        # Process frame in-memory
+        image_bytes = BytesIO(frame.read())
+        image_bytes.seek(0)
+
+        # Use a lightweight check - just extract text and see if it looks like an address
+        import google.generativeai as genai
+        import os
+        from PIL import Image
+
+        # Configure Gemini
+        genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+        model = genai.GenerativeModel('gemini-1.5-flash')
+
+        # Load image
+        image = Image.open(image_bytes)
+
+        # Quick prompt to check for address
+        prompt = """Look at this image. Does it contain a clearly readable mailing address (street, city, state, zip)?
+Respond with ONLY 'YES' if you can see a complete, readable address.
+Respond with ONLY 'NO' if the address is unclear, incomplete, or missing."""
+
+        response = model.generate_content([prompt, image])
+        result_text = response.text.strip().upper()
+
+        # Clean up
+        image.close()
+        image_bytes.close()
+        del image
+        del image_bytes
+        gc.collect()
+
+        has_address = 'YES' in result_text
+
+        return jsonify({'has_address': has_address})
+
+    except Exception as e:
+        print(f"Error checking for address: {e}")
+        return jsonify({'has_address': False})
+
+
 @app.route('/results')
 @require_auth
 def get_results():

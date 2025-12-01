@@ -28,7 +28,21 @@ header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     padding: 40px;
-    text-align: center;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left {
+    text-align: left;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
 }
 
 header h1 {
@@ -44,6 +58,7 @@ header h1 {
 /* Account Menu Dropdown */
 .account-menu-container {
     position: relative;
+    z-index: 1001;
 }
 
 .account-menu-trigger {
@@ -521,6 +536,16 @@ td em {
         padding: 12px 15px;
     }
 
+    .header-content {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .header-left {
+        flex: 1;
+    }
+
     header h1 {
         font-size: 1.4em;
         margin-bottom: 3px;
@@ -549,7 +574,8 @@ td em {
 
     .account-dropdown {
         min-width: 200px;
-        right: -12px; /* Account for body padding removal */
+        right: 0;
+        top: calc(100% + 5px);
     }
 
     .account-dropdown-item {
