@@ -9,18 +9,36 @@
 <body>
     <div class="container">
         <header>
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <h1>Mail Scanner</h1>
                     <p class="subtitle">From your mailbox to theirs in minutes</p>
                 </div>
-                <div style="text-align: right;">
-                    <p style="color: white; margin-bottom: 8px; opacity: 0.9;">{{ user.email }}</p>
-                    <div style="display: flex; gap: 10px;">
-                        <a href="{{ url_for('account') }}" class="btn btn-secondary btn-small" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; display: inline-block;">
+                <div class="account-menu-container">
+                    <button class="account-menu-trigger" onclick="toggleAccountMenu()">
+                        <svg style="width: 20px; height: 20px; vertical-align: middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span class="account-email">{{ user.email }}</span>
+                        <svg class="dropdown-arrow" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                    <div class="account-dropdown" id="accountDropdown">
+                        <a href="{{ url_for('account') }}" class="account-dropdown-item">
+                            <svg style="width: 18px; height: 18px; margin-right: 10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M12 1v6m0 6v6m6-12l-6 6m0 0L6 7m12 12l-6-6m0 0l-6 6"></path>
+                            </svg>
                             Account & Billing
                         </a>
-                        <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-small" style="background: rgba(255,255,255,0.2); color: white; text-decoration: none; display: inline-block;">
+                        <a href="{{ url_for('logout') }}" class="account-dropdown-item">
+                            <svg style="width: 18px; height: 18px; margin-right: 10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                <polyline points="16 17 21 12 16 7"></polyline>
+                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                            </svg>
                             Logout
                         </a>
                     </div>
@@ -871,6 +889,21 @@
         window.addEventListener('beforeunload', () => {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // ==================== ACCOUNT MENU ====================
+
+        function toggleAccountMenu() {
+            const dropdown = document.getElementById('accountDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.account-menu-container')) {
+                const dropdown = document.getElementById('accountDropdown');
+                dropdown.classList.remove('show');
             }
         });
     </script>

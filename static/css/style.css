@@ -41,6 +41,88 @@ header h1 {
     opacity: 0.9;
 }
 
+/* Account Menu Dropdown */
+.account-menu-container {
+    position: relative;
+}
+
+.account-menu-trigger {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95em;
+    transition: all 0.3s ease;
+}
+
+.account-menu-trigger:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.account-email {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dropdown-arrow {
+    transition: transform 0.3s ease;
+}
+
+.account-menu-trigger:hover .dropdown-arrow {
+    transform: translateY(2px);
+}
+
+.account-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    min-width: 220px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.account-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.account-dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    color: #333;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.account-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.account-dropdown-item:hover {
+    background: #f8f9ff;
+    color: #667eea;
+}
+
+.account-dropdown-item svg {
+    stroke: currentColor;
+}
+
 /* Tabs */
 .tabs {
     display: flex;
@@ -444,9 +526,35 @@ td em {
         margin-bottom: 3px;
     }
 
-    header p {
+    header p.subtitle {
         font-size: 0.85em;
         margin-top: 2px;
+    }
+
+    /* Account Menu - Mobile */
+    .account-menu-trigger {
+        padding: 8px 12px;
+        font-size: 0.85em;
+        gap: 6px;
+    }
+
+    .account-email {
+        display: none; /* Hide email on mobile, just show icon */
+    }
+
+    .account-menu-trigger svg:first-child {
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    .account-dropdown {
+        min-width: 200px;
+        right: -12px; /* Account for body padding removal */
+    }
+
+    .account-dropdown-item {
+        padding: 14px 16px;
+        font-size: 0.95em;
     }
 
     /* Compact Tabs - No Border */
