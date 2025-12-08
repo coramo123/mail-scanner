@@ -1,5 +1,5 @@
 """
-Mail Scanner Web Application with Supabase Authentication
+Minute Mail Web Application with Supabase Authentication
 Upload mail photos, scan for sender information, and export to spreadsheet
 """
 
@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 import os
 import uuid
 from datetime import datetime
-from mail_scanner import MailScanner
+from minute_mail import MinuteMail
 import pandas as pd
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -61,8 +61,8 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'heic', 'heif'}
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['EXPORT_FOLDER'], exist_ok=True)
 
-# Initialize mail scanner
-scanner = MailScanner()
+# Initialize Minute Mail
+scanner = MinuteMail()
 
 
 def allowed_file(filename):

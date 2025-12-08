@@ -1,8 +1,8 @@
 """
-Example usage of the Mail Scanner
+Example usage of the Minute Mail
 """
 
-from mail_scanner import MailScanner
+from minute_mail import MinuteMail
 import os
 from dotenv import load_dotenv
 
@@ -19,7 +19,7 @@ def example_basic_usage():
     print("=" * 60)
 
     # Create scanner (automatically uses Gemini if GEMINI_API_KEY is set)
-    scanner = MailScanner()
+    scanner = MinuteMail()
 
     # Scan a mail image
     image_path = "sample_mail.jpg"  # Replace with your image path
@@ -50,7 +50,7 @@ def example_batch_processing():
     print("EXAMPLE 2: Batch Processing")
     print("=" * 60)
 
-    scanner = MailScanner()
+    scanner = MinuteMail()
 
     # List of mail images to process
     image_paths = [
@@ -88,10 +88,10 @@ def example_explicit_api_key():
 
     # Option 1: Pass API key directly
     api_key = "your_api_key_here"  # Replace with actual key
-    scanner = MailScanner(gemini_api_key=api_key)
+    scanner = MinuteMail(gemini_api_key=api_key)
 
     # Option 2: Use environment variable (recommended)
-    # scanner = MailScanner()  # Reads from GEMINI_API_KEY env var
+    # scanner = MinuteMail()  # Reads from GEMINI_API_KEY env var
 
     print("Scanner initialized with explicit API key")
     print()
@@ -106,7 +106,7 @@ def example_force_tesseract():
     print("=" * 60)
 
     # Force Tesseract usage (useful for offline processing or testing)
-    scanner = MailScanner(use_gemini=False)
+    scanner = MinuteMail(use_gemini=False)
 
     image_path = "sample_mail.jpg"
 
@@ -128,7 +128,7 @@ def example_with_error_handling():
     print("EXAMPLE 5: With Error Handling")
     print("=" * 60)
 
-    scanner = MailScanner()
+    scanner = MinuteMail()
     image_path = "sample_mail.jpg"
 
     try:
@@ -154,7 +154,7 @@ def main():
     Run all examples
     """
     print("\n" + "=" * 60)
-    print("MAIL SCANNER - EXAMPLES")
+    print("MINUTE MAIL - EXAMPLES")
     print("=" * 60 + "\n")
 
     # Check if API key is configured

@@ -1,5 +1,5 @@
 """
-Mail Scanner - Extract sender information from mail photos
+Minute Mail - Extract sender information from mail photos
 Supports both Gemini Vision API (primary) and Tesseract OCR (fallback)
 """
 
@@ -46,7 +46,7 @@ except ImportError:
     print("Warning: smartystreets-python-sdk not installed. Address verification will be unavailable.")
 
 
-class MailScanner:
+class MinuteMail:
     """
     Scans photos of mail to extract return address and sender name.
     """
@@ -55,7 +55,7 @@ class MailScanner:
                  smarty_auth_id: Optional[str] = None, smarty_auth_token: Optional[str] = None,
                  use_smarty: bool = True):
         """
-        Initialize the mail scanner.
+        Initialize Minute Mail.
 
         Args:
             gemini_api_key: API key for Gemini. If None, reads from GEMINI_API_KEY env var
@@ -532,19 +532,19 @@ class MailScanner:
 
 def main():
     """
-    Example usage of the MailScanner.
+    Example usage of MinuteMail.
     """
     import sys
 
     if len(sys.argv) < 2:
-        print("Usage: python mail_scanner.py <image_path>")
-        print("Example: python mail_scanner.py sample_mail.jpg")
+        print("Usage: python minute_mail.py <image_path>")
+        print("Example: python minute_mail.py sample_mail.jpg")
         sys.exit(1)
 
     image_path = sys.argv[1]
 
     # Create scanner (will use Gemini if API key is set in environment)
-    scanner = MailScanner()
+    scanner = MinuteMail()
 
     print(f"Scanning mail image: {image_path}")
     print("-" * 50)

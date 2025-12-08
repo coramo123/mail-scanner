@@ -1,4 +1,4 @@
-# Mail Scanner
+# Minute Mail
 
 A Python tool that scans photos of mail (envelopes, postcards, packages) to extract return address information and sender names. Uses Google Gemini Vision API for accurate text extraction from handwriting and varied fonts, with Tesseract OCR as a fallback option.
 
@@ -60,7 +60,7 @@ SMARTY_AUTH_TOKEN=your_smarty_auth_token_here
 ### Command Line
 
 ```bash
-python mail_scanner.py path/to/mail_photo.jpg
+python minute_mail.py path/to/mail_photo.jpg
 ```
 
 Example output:
@@ -85,14 +85,14 @@ Verified Address: 123 Main St, Springfield, IL 62701-1234
 ### Python Code
 
 ```python
-from mail_scanner import MailScanner
+from minute_mail import MinuteMail
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
 # Create scanner
-scanner = MailScanner()
+scanner = MinuteMail()
 
 # Scan mail image
 result = scanner.scan_mail("mail_photo.jpg")
@@ -144,7 +144,7 @@ The scanner returns a dictionary with the following structure:
 
 ```python
 # Disable Smarty address verification
-scanner = MailScanner(use_smarty=False)
+scanner = MinuteMail(use_smarty=False)
 result = scanner.scan_mail("mail.jpg")
 ```
 
@@ -152,7 +152,7 @@ result = scanner.scan_mail("mail.jpg")
 
 ```python
 # Use Tesseract instead of Gemini (for offline use)
-scanner = MailScanner(use_gemini=False)
+scanner = MinuteMail(use_gemini=False)
 result = scanner.scan_mail("mail.jpg")
 ```
 
@@ -160,7 +160,7 @@ result = scanner.scan_mail("mail.jpg")
 
 ```python
 # Pass API keys directly instead of using .env
-scanner = MailScanner(
+scanner = MinuteMail(
     gemini_api_key="your_gemini_key_here",
     smarty_auth_id="your_smarty_auth_id",
     smarty_auth_token="your_smarty_token"
@@ -170,7 +170,7 @@ scanner = MailScanner(
 ### Access Verified Address
 
 ```python
-scanner = MailScanner()
+scanner = MinuteMail()
 result = scanner.scan_mail("mail.jpg")
 
 # Check if address was verified
@@ -185,7 +185,7 @@ else:
 ### Batch Processing
 
 ```python
-scanner = MailScanner()
+scanner = MinuteMail()
 
 mail_images = ["mail1.jpg", "mail2.jpg", "mail3.jpg"]
 results = []
