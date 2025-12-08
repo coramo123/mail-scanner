@@ -850,7 +850,7 @@ def handle_payment_failed(invoice):
 
 if __name__ == '__main__':
     print("\n" + "="*60)
-    print("MAIL SCANNER WEB APP WITH SUPABASE")
+    print("MINUTE MAIL WEB APP WITH SUPABASE")
     print("="*60)
 
     # Use PORT from environment (for production) or default to 5001 (for local dev)
